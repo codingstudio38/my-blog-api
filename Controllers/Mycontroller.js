@@ -312,4 +312,6 @@ async function UserByid(req, resp) {
         return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
     }
 }
+
+
 module.exports = { Users, CreateUser, Userlogin, UpdateUser, UserLogout, UpdateUserPhoto, CkeditorfileUpload, UserByid };

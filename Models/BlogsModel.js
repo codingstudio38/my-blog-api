@@ -5,8 +5,11 @@ const mongoose = require('mongoose');
 const BlogSchema = new mongooseConnect.Schema({
     user_id: { type: 'ObjectId', required: true, trim: true, },
     title: { type: String, required: true, trim: true, },
+    sort_description: { type: String, required: true, trim: true, },
+    blog_type: { type: 'ObjectId', required: true, trim: true, },
     content: { type: String, required: true, trim: true },
     photo: { type: String, required: true, trim: true, },
+    thumbnail: { type: String, required: false, trim: true, },
     content_alias: { type: String, required: true, trim: true, },
     active_status: { type: Number, required: false, default: 1 },
     delete: { type: Number, required: false, default: 0 },
