@@ -1,0 +1,27 @@
+const express = require("express");
+const routeapp = new express.Router();
+const AgeAuth = require("./../middleware/AgeAuth");
+const Auth = require("./../middleware/Auth");
+const Mycontroller = require("./../Controllers/Mycontroller");
+const Blogcontroller = require("./../Controllers/Blogcontroller");
+routeapp.get('/', async (req, resp) => {
+    return resp.status(200).json({ "status": 200, "message": "Success" });
+})
+routeapp.post('/create-user', Mycontroller.CreateUser)
+routeapp.post('/user-login', Mycontroller.Userlogin)
+routeapp.post('/user-logout', Auth, Mycontroller.UserLogout)
+routeapp.post('/update-user', Auth, Mycontroller.UpdateUser)
+routeapp.post('/update-user-photo', Auth, Mycontroller.UpdateUserPhoto)
+routeapp.get('/users', Auth, Mycontroller.Users)
+routeapp.post('/user-byid/:id', Auth, Mycontroller.UserByid)
+routeapp.post('/upload-blog-images', Auth, Blogcontroller.UplodePhoto)
+routeapp.post('/create-blog', Auth, Blogcontroller.CreactBlog)
+routeapp.post('/my-blogs', Auth, Blogcontroller.Myblogs)
+routeapp.post('/ckeditor', Auth, Mycontroller.CkeditorfileUpload)
+routeapp.post('/delete-blogs/:id', Auth, Blogcontroller.DeleteBlogByid)
+routeapp.post('/blog-byid/:id', Auth, Blogcontroller.BlogByid)
+routeapp.post('/update-blog', Auth, Blogcontroller.UpdateBlog)
+routeapp.all(/.*/, async (req, res) => {
+    res.status(404).json({ status: 404, message: "route not found..!!" });
+});
+module.exports = routeapp;
