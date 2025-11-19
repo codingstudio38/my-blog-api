@@ -4,6 +4,7 @@ const AgeAuth = require("./../middleware/AgeAuth");
 const Auth = require("./../middleware/Auth");
 const Mycontroller = require("./../Controllers/Mycontroller");
 const Blogcontroller = require("./../Controllers/Blogcontroller");
+const Homepagecontroller = require("./../Controllers/Homepagecontroller");
 routeapp.get('/', async (req, resp) => {
     return resp.status(200).json({ "status": 200, "message": "Success" });
 })
@@ -23,6 +24,8 @@ routeapp.post('/ckeditor', Auth, Mycontroller.CkeditorfileUpload)
 routeapp.post('/delete-blogs/:id', Auth, Blogcontroller.DeleteBlogByid)
 routeapp.post('/blog-byid/:id', Auth, Blogcontroller.BlogByid)
 routeapp.post('/update-blog', Auth, Blogcontroller.UpdateBlog)
+routeapp.post('/all-blogs', Auth, Homepagecontroller.Allblogs)
+
 routeapp.all(/.*/, async (req, res) => {
     res.status(404).json({ status: 404, message: "route not found..!!" });
 });

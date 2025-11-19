@@ -18,6 +18,7 @@ const UsersSchema = new mongooseConnect.Schema({
     delete: { type: Number, required: false, default: 0 },
     created_at: { type: Date, required: true, default: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss') },//new Date()
     updated_at: { type: Date, required: false, default: null },
+    wsstatus: { type: Number, required: false, default: 0 },
 });
 UsersSchema.methods.generateAuthToken = async function () {
     try {

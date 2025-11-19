@@ -10,6 +10,7 @@ try {
     app.set("view engine", "ejs");
     app.set("views", path.join(__dirname, "./views/"));
     const expressSession = require("express-session");
+    const WebsocketController = require("./Controllers/WebsocketController");
     app.use(expressSession({
         "resave": false,
         "saveUninitialized": true,
@@ -17,6 +18,7 @@ try {
         "secret": 'user secret',
         // cookie: { secure: true }
     }));
+    WebsocketController.runWsServer();
     app.use(express.json());
     app.use(Fileupload());
     app.use(cors());

@@ -226,6 +226,7 @@ async function Userlogin(req, resp) {
             "created_at": user['created_at'],
             "updated_at": user['updated_at'],
             "token": token,
+            "wsstatus": user['wsstatus'],
         }
         return resp.status(200).json({ "status": 200, "message": "Successfully logged in.", "user": data });
     } catch (error) {
@@ -292,6 +293,7 @@ async function UserByid(req, resp) {
             let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
             obj = {
                 "_id": user._id,
+                "wsstatus": user.wsstatus,
                 "name": user.name,
                 "phone": user.phone,
                 "email": user.email,
@@ -314,4 +316,19 @@ async function UserByid(req, resp) {
 }
 
 
-module.exports = { Users, CreateUser, Userlogin, UpdateUser, UserLogout, UpdateUserPhoto, CkeditorfileUpload, UserByid };
+async function UpdateUserWsStatus(userid, Status) {
+    try {
+        if (userid == "") {
+            console.log('ws user id required');
+            return 0;
+        }
+        let updateis = await UsersModel.updateOne({ _id: userid }, { $set: { wsstatus: Status } });
+        console.log({ "status": 200, "message": "Success ws status updated" });//, "data": updateis 
+        return 1;
+    } catch (error) {
+        console.log({ "status": 400, "message": "Failed to update es status" });//, "error": error.message 
+        return 0;
+    }
+}
+
+module.exports = { Users, CreateUser, Userlogin, UpdateUser, UserLogout, UpdateUserPhoto, CkeditorfileUpload, UserByid, UpdateUserWsStatus };
