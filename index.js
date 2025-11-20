@@ -18,7 +18,7 @@ try {
         "secret": 'user secret',
         // cookie: { secure: true }
     }));
-    WebsocketController.runWsServer();
+    // WebsocketController.runWsServer();
     app.use(express.json());
     app.use(Fileupload());
     app.use(cors());

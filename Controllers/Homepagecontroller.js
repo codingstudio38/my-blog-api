@@ -1,21 +1,12 @@
-const mongodb = require('mongodb');
 const moment = require('moment-timezone');
-// const mongoose = require('mongoose');
-// const UsersModel = require('../Models/UsersModel');
 const BlogsModel = require('../Models/BlogsModel');
-// const BlogsCategoryModel = require('../Models/BlogCategory');
 const Healper = require('./Healper');
-// const bcrypt = require("bcrypt");
-const crypto = require('crypto');
-const path = require('path');
-// const fs = require('fs');
-const APP_URL = process.env.APP_URL;
 const APP_STORAGE = process.env.APP_STORAGE;
 async function Allblogs(req, resp) {
     try {
         let { limit = 5, page = 1 } = req.query;
         let { title = '', user_id = '' } = req.body;
-        let skip = 0,totalpage=0;
+        let skip = 0, totalpage = 0;
         limit = parseInt(limit);
         page = parseInt(page);
         skip = (page - 1) * limit;
@@ -24,10 +15,10 @@ async function Allblogs(req, resp) {
         if (title !== '') {
             andConditions.push({ title: { $regex: new RegExp(title, "i") } });
         }
-     
+
         andConditions.push({ delete: 0 });
         let query = andConditions.length > 0 ? { $and: andConditions } : {};
-    
+
         let list = await BlogsModel.aggregate([
             { $match: query },
             {

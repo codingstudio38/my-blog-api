@@ -89,7 +89,18 @@ async function CreateUser(req, resp) {
 
 async function UpdateUser(req, resp) {
     try {
-        let { name = '', phone = '', email = '', password = '', id = '' } = req.body;
+        let {
+            name = '',
+            phone = '',
+            email = '',
+            password = '',
+            id = '',
+            occupation = '',
+            skills = '',
+            dob = '',
+            country = '',
+            address = '',
+        } = req.body;
         if (!id) {
             return resp.status(200).json({ 'status': 400, 'message': 'id required.' });
         }
@@ -123,9 +134,15 @@ async function UpdateUser(req, resp) {
             name: name,
             phone: phone,
             email: email,
+            occupation: occupation,
+            skills: skills,
+            country: country,
+            address: address,
             updated_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
         };
-
+        if (dob !== '' && dob !== null) {
+            updatedata['dob'] = moment(dob).format('YYYY-MM-DD');
+        }
         if (password !== '') {
             let salt = await bcrypt.genSalt(10);//genSaltSync(10)
             let password_ = await bcrypt.hash(password, salt);//hashSync(password,salt);
@@ -226,6 +243,11 @@ async function Userlogin(req, resp) {
             "created_at": user['created_at'],
             "updated_at": user['updated_at'],
             "token": token,
+            "occupation": user['occupation'],
+            "skills": user['skills'],
+            "dob": user['dob'],
+            "country": user['country'],
+            "address": user['address'],
             "wsstatus": user['wsstatus'],
         }
         return resp.status(200).json({ "status": 200, "message": "Successfully logged in.", "user": data });
@@ -301,6 +323,11 @@ async function UserByid(req, resp) {
                 "password": user.password,
                 "active_status": user.active_status,
                 "file_dtl": file_dtl,
+                "occupation": user.occupation,
+                "skills": user.skills,
+                "dob": user.dob !== null ? moment(user.dob).format('YYYY-MM-DD') : null,
+                "country": user.country,
+                "address": user.address,
                 "created_at": moment(user.created_at).format('YYYY-MM-DD HH:mm:ss'),
                 "updated_at": user.updated_at == null ? null : moment(user.updated_at).format('YYYY-MM-DD HH:mm:ss'),
             }

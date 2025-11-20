@@ -66,9 +66,9 @@ const runWsServer = () => {
         connection.on("close", function (reasonCode, description) {
             console.log(new Date() + " Peer " + connection.remoteAddress + " disconnected.");
 
-            // if (clients[userID]) {
-            //     delete clients[userID];
-            // }
+            if (clients[userID]) {
+                delete clients[userID];
+            }
             // clients = clients.filter(num => num !== userID);
             // Notify all clients of the disconnection
             for (let key in clients) {
