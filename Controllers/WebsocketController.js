@@ -2,6 +2,12 @@ const http = require("http");
 const webSocketServer = require("websocket").server;
 const Mycontroller = require("./Mycontroller");
 const SOCKET_PORT = process.env.SOCKETPORT;
+
+const new_client = process.env.new_client;
+const client_disconnected = process.env.client_disconnected;
+const new_message_receive = process.env.new_message_receive;
+const receive_binary_data = process.env.receive_binary_data;
+
 const clients = {};
 function originIsAllowed(origin) {
     return true; // Add your logic to allow specific origins
@@ -33,7 +39,7 @@ const runWsServer = () => {
 
         for (let key in clients) {
             clients[key].sendUTF(JSON.stringify({
-                code: 1000,
+                code: new_client,
                 msg: "New client connected..",
                 clientid: userID,
             }));// Notify all clients of the new connection
@@ -44,7 +50,7 @@ const runWsServer = () => {
             if (message.type === "utf8") {
                 console.log("Received Message:", message.utf8Data);
                 let data = {
-                    ...message, clientid: userID, code: 3000, msg: "Received message.",
+                    ...message, clientid: userID, code: new_message_receive, msg: "Received message.",
                 };
                 // Broadcast message to all clients
                 for (let key in clients) {
@@ -55,7 +61,7 @@ const runWsServer = () => {
                 // Broadcast binary message to all clients
 
                 let data = {
-                    ...message, clientid: userID, code: 4000, msg: "Received binary message.",
+                    ...message, clientid: userID, code: receive_binary_data, msg: "Received binary message.",
                 };
                 for (let key in clients) {
                     clients[key].sendBytes(data);
@@ -73,7 +79,7 @@ const runWsServer = () => {
             // Notify all clients of the disconnection
             for (let key in clients) {
                 clients[key].sendUTF(JSON.stringify({
-                    code: 2000,
+                    code: client_disconnected,
                     msg: "Client disconnected..",
                     clientid: userID,
                 }));

@@ -1,4 +1,3 @@
-const mongodb = require('mongodb');
 const moment = require('moment-timezone');
 const mongooseConnect = require('../Config/MongooseConfig');
 const mongoose = require('mongoose');
