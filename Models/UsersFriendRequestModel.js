@@ -44,8 +44,10 @@ Schema.methods.checkFriendRequest = async function (from, to) {
                 $project: {
                     from: 1,
                     to: 1,
-                    from_user_detail: "$from_user_detail.name",
-                    to_user_detail: "$to_user_detail.name",
+                    from_user_name: "$from_user_detail.name",
+                    from_user_photo: "$from_user_detail.photo",
+                    to_user_name: "$to_user_detail.name",
+                    to_user_photo: "$to_user_detail.photo",
                     accept_status: 1,
                     created_at: 1,
                 }
