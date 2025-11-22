@@ -6,6 +6,7 @@ const Mycontroller = require("./../Controllers/Mycontroller");
 const Blogcontroller = require("./../Controllers/Blogcontroller");
 const Homepagecontroller = require("./../Controllers/Homepagecontroller");
 const FindFriends = require("./../Controllers/FindFriends");
+const AllNotificationController = require("./../Controllers/AllNotificationController");
 const UsersFriendRequestController = require("./../Controllers/UsersFriendRequestController");
 routeapp.get('/', async (req, resp) => {
     return resp.status(200).json({ "status": 200, "message": "Success" });
@@ -32,6 +33,8 @@ routeapp.post('/send-request', Auth, UsersFriendRequestController.SendRequest)
 routeapp.post('/cencel-request', Auth, UsersFriendRequestController.CencelRequest)
 routeapp.post('/accept-or-reject-request', Auth, UsersFriendRequestController.AcceptOrRejectRequest)
 routeapp.post('/delete-friend', Auth, UsersFriendRequestController.DeleteFriend)
+routeapp.post('/all-notifications', Auth, AllNotificationController.AllNotifications)
+routeapp.post('/read-notification', Auth, AllNotificationController.ReadThis)
 routeapp.all(/.*/, async (req, res) => {
     res.status(404).json({ status: 404, message: "route not found..!!" });
 });
