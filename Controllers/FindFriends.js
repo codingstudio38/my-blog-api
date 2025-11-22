@@ -25,21 +25,129 @@ async function AllUsers(req, resp) {
 
         let list = await UsersModel.aggregate([
             { $match: query },
+            {
+                $lookup: {
+                    from: "users_friends",
+                    let: { friendId: "$_id", loggedinuserid: new mongodb.ObjectId(user_id) },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$userid", "$$loggedinuserid"] },
+                                        { $eq: ["$friend", "$$friendId"] },
+                                        { $eq: ["$delete", 0] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "friendship"
+                }
+            },
+            // Count documents & create is_friend field
+            {
+                $addFields: {
+                    is_friend: { $size: "$friendship" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "users_friend_requests",
+                    let: {
+                        me: new mongodb.ObjectId(user_id),  // logged user
+                        other: "$_id"                       // loop user
+                    },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+
+                                    $and: [
+                                        { $eq: ["$delete", 0] },
+                                        {
+                                            $or: [
+                                                {
+                                                    $and: [
+                                                        { $eq: ["$from", "$$me"] },
+                                                        { $eq: ["$to", "$$other"] }
+                                                    ]
+                                                },
+                                                {
+                                                    $and: [
+                                                        { $eq: ["$from", "$$other"] },
+                                                        { $eq: ["$to", "$$me"] }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+
+                                }
+                            }
+                        },
+                        // Join the FROM user details
+                        {
+                            $lookup: {
+                                from: "users",
+                                localField: "from",
+                                foreignField: "_id",
+                                as: "from_user_detail"
+                            }
+                        },
+                        { $unwind: { path: "$from_user_detail", preserveNullAndEmptyArrays: true } },
+
+                        // Join the TO user details
+                        {
+                            $lookup: {
+                                from: "users",
+                                localField: "to",
+                                foreignField: "_id",
+                                as: "to_user_detail"
+                            }
+                        },
+                        { $unwind: { path: "$to_user_detail", preserveNullAndEmptyArrays: true } },
+
+                        // Select fields you want
+                        {
+                            $project: {
+                                from: 1,
+                                to: 1,
+                                accept_status: 1,
+                                created_at: 1,
+
+                                from_user_name: "$from_user_detail.name",
+                                from_user_photo: "$from_user_detail.photo",
+
+                                to_user_name: "$to_user_detail.name",
+                                to_user_photo: "$to_user_detail.photo",
+                            }
+                        }
+                    ],
+                    as: "friend_request"
+                }
+            },
+            {
+                $addFields: {
+                    check_friend_request: { $size: "$friend_request" }
+                }
+            },
             { $sort: { _id: -1 } },
             { $skip: skip },
             { $limit: limit },
         ]);
+        // console.log(list);
         let total = await UsersModel
             .find(query)
             .countDocuments();
         totalpage = Math.ceil(total / limit);
-        const user_friend_model = new UsersFriendModel;
-        const user_friend_request_model = new UsersFriendRequestModel;
+        // const user_friend_model = new UsersFriendModel;
+        // const user_friend_request_model = new UsersFriendRequestModel;
         let resetdata_is = await Promise.all(
             list.map(async (element) => {
                 let uid = element._id.toString();
-                let totalfriend = await user_friend_model.IsFriend(user_id, uid);
-                let friend_request = await user_friend_request_model.checkFriendRequest(user_id, uid);
+                // let totalfriend = await user_friend_model.IsFriend(user_id, uid);
+                // let friend_request = await user_friend_request_model.checkFriendRequest(user_id, uid);
                 let file_name = element.photo;
                 let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
                 let file_view_path = `${APP_STORAGE}users/${file_name}`;
@@ -58,9 +166,9 @@ async function AllUsers(req, resp) {
                     "user_file_dtl": file_dtl,
                     "address": element.address == undefined ? "" : element.address,
                     "country": element.country == undefined ? "" : element.country,
-                    "is_friend": totalfriend,
-                    "friend_request": friend_request.length > 0 ? friend_request[0] : null,
-                    "check_friend_request": friend_request.length > 0 ? 1 : 0,
+                    "is_friend": element.is_friend,
+                    "friend_request": element.friend_request.length > 0 ? element.friend_request[0] : null,
+                    "check_friend_request": element.check_friend_request,
                 }
             })
         );

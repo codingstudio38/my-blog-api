@@ -12,7 +12,7 @@ const Schema = new mongooseConnect.Schema({
 });
 Schema.methods.checkFriendRequest = async function (from, to) {
     try {
-        return await mongoose.model('users_friend_request').aggregate([
+        return await mongoose.model('users_friend_requests').aggregate([
             {
                 $match: {
                     $or: [
@@ -59,7 +59,7 @@ Schema.methods.checkFriendRequest = async function (from, to) {
 }
 Schema.methods.checkByRequestId = async function (id) {
     try {
-        return await mongoose.model('users_friend_request').aggregate([
+        return await mongoose.model('users_friend_requests').aggregate([
             {
                 $match: {
                     $and: [{ '_id': new mongodb.ObjectId(id) }, { 'delete': 0 }],
@@ -100,5 +100,5 @@ Schema.methods.checkByRequestId = async function (id) {
         throw new Error(error);
     }
 }
-const UsersFriendRequestModel = mongooseConnect.model('users_friend_request', Schema);
+const UsersFriendRequestModel = mongooseConnect.model('users_friend_requests', Schema);
 module.exports = UsersFriendRequestModel;

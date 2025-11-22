@@ -119,6 +119,16 @@ async function CencelRequest(req, resp) {
             ]
         }).countDocuments();
 
+        const check_user_request_satus = await UsersFriendRequestModel.find({
+            $and: [
+                { '_id': new mongodb.ObjectId(requestid) },
+                { 'delete': 0 }
+            ]
+        }).countDocuments();
+
+        if (check_user_request_satus <= 0) {
+            return resp.status(200).json({ "status": 600, "message": "friend request rejected", 'result': check_user_request_satus });
+        }
         if (check_user_accept_satus <= 0) {
             let user_friend_request_model = new UsersFriendRequestModel;
             let friend_request = await user_friend_request_model.checkFriendRequest(from, to);
