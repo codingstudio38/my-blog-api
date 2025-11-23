@@ -29,13 +29,16 @@ routeapp.post('/blog-byid/:id', Auth, Blogcontroller.BlogByid)
 routeapp.post('/update-blog', Auth, Blogcontroller.UpdateBlog)
 routeapp.post('/all-blogs', Auth, Homepagecontroller.Allblogs)
 routeapp.post('/find-friends', Auth, FindFriends.AllUsers)
+routeapp.post('/my-friends', Auth, FindFriends.MyFriends)
+routeapp.post('/friend-rquest-already-send', Auth, FindFriends.FriendRequestSendList)
+routeapp.post('/new-friend-request-list', Auth, FindFriends.NewFriendRequestList)
 routeapp.post('/send-request', Auth, UsersFriendRequestController.SendRequest)
 routeapp.post('/cencel-request', Auth, UsersFriendRequestController.CencelRequest)
 routeapp.post('/accept-or-reject-request', Auth, UsersFriendRequestController.AcceptOrRejectRequest)
 routeapp.post('/delete-friend', Auth, UsersFriendRequestController.DeleteFriend)
 routeapp.post('/all-notifications', Auth, AllNotificationController.AllNotifications)
 routeapp.post('/read-notification', Auth, AllNotificationController.ReadThis)
-routeapp.post('/my-friends', Auth, FindFriends.MyFriends)
+
 routeapp.all(/.*/, async (req, res) => {
     res.status(404).json({ status: 404, message: "route not found..!!" });
 });
