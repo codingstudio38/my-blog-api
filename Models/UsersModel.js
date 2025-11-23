@@ -19,6 +19,7 @@ const UsersSchema = new mongooseConnect.Schema({
     dob: { type: Date, required: false, default: null },
     country: { type: String, required: false, trim: true, default: '' },
     address: { type: String, required: false, trim: true, default: '' },
+    about_us: { type: String, required: false, trim: true, default: '' },
     active_status: { type: Number, required: false, default: 1 },
     delete: { type: Number, required: false, default: 0 },
     created_at: { type: Date, required: true, default: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss') },//new Date()

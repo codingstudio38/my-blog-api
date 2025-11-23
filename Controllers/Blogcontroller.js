@@ -2,8 +2,11 @@ const mongodb = require('mongodb');
 const moment = require('moment-timezone');
 const mongoose = require('mongoose');
 const UsersModel = require('../Models/UsersModel');
+const UsersFriendModel = require('../Models/UsersFriendModel');
 const BlogsModel = require('../Models/BlogsModel');
 const BlogsCategoryModel = require('../Models/BlogCategoryModel');
+const AllNotificationsModel = require('../Models/AllNotificationsModel');
+const { clients } = require("./WebsocketController");
 const Healper = require('./Healper');
 const bcrypt = require("bcrypt");
 const crypto = require('crypto');
@@ -11,6 +14,7 @@ const path = require('path');
 const fs = require('fs');
 const APP_URL = process.env.APP_URL;
 const APP_STORAGE = process.env.APP_STORAGE;
+const blog_post_status = process.env.blog_post_status;
 async function UplodePhoto(req, resp) {
     try {
         let { userid = '' } = req.body;
@@ -154,6 +158,36 @@ async function CreactBlog(req, resp) {
 
         let Blog = new BlogsModel(data);
         Blog = await Blog.save();
+
+        let user_friends_model = new UsersFriendModel;
+        let friends_list = await user_friends_model.getAllMyFriendByid(user_id);
+        if (friends_list.length > 0) {
+            let notify_list = [];
+            friends_list.forEach((element) => {
+                notify_list.push({
+                    notify_toid: element.to_user_id,
+                    userid: user_id,
+                    requestid: element.requestid,
+                    from: element.from_user_id,
+                    to: element.to_user_id,
+                    accept_status: 0,
+                    from_user_name: element.from_user_name,
+                    from_user_photo: element.from_user_photo,
+                    to_user_name: element.to_user_name,
+                    to_user_photo: element.to_user_photo,
+                    category: blog_post_status,
+                    remove_byid: '',
+                    blog_id: Blog._id,
+                    text: Blog.title,
+                    read_status: 0
+                })
+                if (clients[element.to_user_id]) {
+                    let data = { "code": blog_post_status, "message": "new blog post", 'result': Blog._id }
+                    clients[element.to_user_id].sendUTF(JSON.stringify(data));
+                }
+            });
+            await AllNotificationsModel.insertMany(notify_list);
+        }
         return resp.status(200).json({ "status": 200, "message": "Success", 'result': Blog });
     } catch (error) {
         return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });

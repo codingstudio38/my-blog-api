@@ -3,11 +3,12 @@ const mongooseConnect = require('../Config/MongooseConfig');
 const mongoose = require('mongoose');
 const mongodb = require('mongodb');
 const Schema = new mongooseConnect.Schema({
-    requestid: { type: 'ObjectId', required: true, trim: true, },
+    requestid: { type: 'ObjectId', required: false, trim: true, },
     userid: { type: 'ObjectId', required: true, trim: true, },
     notify_toid: { type: 'ObjectId', required: true, trim: true, },
     to: { type: 'ObjectId', required: false, trim: true, },
     from: { type: 'ObjectId', required: false, trim: true, },
+    blog_id: { type: 'ObjectId', required: false, trim: true, },
     accept_status: { type: Number, required: false, default: 0 },
     from_user_name: { type: String, required: false, default: '' },
     from_user_photo: { type: String, required: false, default: '' },

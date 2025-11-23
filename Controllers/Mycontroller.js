@@ -100,6 +100,7 @@ async function UpdateUser(req, resp) {
             dob = '',
             country = '',
             address = '',
+            about_us = '',
         } = req.body;
         if (!id) {
             return resp.status(200).json({ 'status': 400, 'message': 'id required.' });
@@ -138,6 +139,7 @@ async function UpdateUser(req, resp) {
             skills: skills,
             country: country,
             address: address,
+            about_us: about_us,
             updated_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
         };
         if (dob !== '' && dob !== null) {
@@ -248,6 +250,7 @@ async function Userlogin(req, resp) {
             "dob": user['dob'],
             "country": user['country'],
             "address": user['address'],
+            "about_us": user['about_us'],
             "wsstatus": user['wsstatus'],
         }
         return resp.status(200).json({ "status": 200, "message": "Successfully logged in.", "user": data });
@@ -328,6 +331,7 @@ async function UserByid(req, resp) {
                 "dob": user.dob !== null ? moment(user.dob).format('YYYY-MM-DD') : null,
                 "country": user.country,
                 "address": user.address,
+                "about_us": user.about_us,
                 "created_at": moment(user.created_at).format('YYYY-MM-DD HH:mm:ss'),
                 "updated_at": user.updated_at == null ? null : moment(user.updated_at).format('YYYY-MM-DD HH:mm:ss'),
             }

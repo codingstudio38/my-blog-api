@@ -14,7 +14,7 @@ const APP_STORAGE = process.env.APP_STORAGE;
 async function AllNotifications(req, resp) {
     try {
         let { limit = 5, page = 1 } = req.query;
-        let { user_id = '' } = req.body;
+        let { user_id = '', blog_id = '' } = req.body;
         let skip = 0, totalpage = 0;
         limit = parseInt(limit);
         page = parseInt(page);
@@ -24,13 +24,70 @@ async function AllNotifications(req, resp) {
         andConditions.push({ delete: 0 });
         andConditions.push({ read_status: 0 });
         andConditions.push({ notify_toid: { $eq: new mongodb.ObjectId(user_id) } });
+        if (blog_id !== '') {
+            andConditions.push({ blog_id: { $eq: new mongodb.ObjectId(blog_id) } });
+        }
         let query = andConditions.length > 0 ? { $and: andConditions } : {};
 
         let list = await AllNotificationsModel.aggregate([
             { $match: query },
+            {
+                $lookup: {
+                    from: "users", // collection name (not model name)
+                    localField: "from",
+                    foreignField: "_id",
+                    as: "from_user_details"
+                }
+            },
+            { $unwind: { path: "$from_user_details", preserveNullAndEmptyArrays: true } },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "to",
+                    foreignField: "_id",
+                    as: "to_user_details"
+                }
+            },
+            { $unwind: { path: "$to_user_details", preserveNullAndEmptyArrays: true } },
+            {
+                $lookup: {
+                    from: "blogs",
+                    localField: "blog_id",
+                    foreignField: "_id",
+                    as: "blog_details"
+                }
+            },
+            { $unwind: { path: "$blog_details", preserveNullAndEmptyArrays: true } },
             { $sort: { _id: -1 } },
-            // { $skip: skip },
-            // { $limit: limit },
+            {
+                $project: {
+                    requestid: 1,
+                    userid: 1,
+                    notify_toid: 1,
+                    to: 1,
+                    from: 1,
+                    accept_status: 1,
+                    from_user_name: "$from_user_details.name",
+                    from_user_photo: "$from_user_details.photo",
+                    to_user_name: "$to_user_details.name",
+                    to_user_photo: "$to_user_details.photo",
+                    category: 1,
+                    text: 1,
+                    read_status: 1,
+                    remove_byid: 1,
+                    delete: 1,
+                    created_at: 1,
+                    updated_at: 1,
+                    blog_id: 1,
+                    blog_title: "$blog_details.title",
+                    blog_photo: "$blog_details.photo",
+                    blog_content_alias: "$blog_details.content_alias",
+                    blog_thumbnail: "$blog_details.thumbnail",
+                    blog_type: "$blog_details.blog_type",
+                }
+            },
+            { $skip: skip },
+            { $limit: limit },
         ]);
         let total = await AllNotificationsModel
             .find(query)
@@ -47,12 +104,25 @@ async function AllNotifications(req, resp) {
                 let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
                 let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
                 let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
+
+                let blog_file_name = element.blog_photo;
+                let blog_file_path = `${Healper.storageFolderPath()}user-blogs/${blog_file_name}`;
+                let blog_file_view_path = `${APP_STORAGE}user-blogs/${blog_file_name}`;
+                let blog_file_dtl = await Healper.FileInfo(blog_file_name, blog_file_path, blog_file_view_path);
+
+                let blog_thumbnail_name = element.blog_thumbnail;
+                let blog_thumbnail_path = `${Healper.storageFolderPath()}user-blogs/thumbnail/${blog_thumbnail_name}`;
+                let blog_thumbnail_view_path = `${APP_STORAGE}user-blogs/thumbnail/${blog_thumbnail_name}`;
+                let blog_thumbnail_dtl = await Healper.FileInfo(blog_thumbnail_name, blog_thumbnail_path, blog_thumbnail_view_path);
+
                 return {
                     ...element,
                     "created_at": moment(element.created_at).format('YYYY-MM-DD HH:mm:ss'),
                     "updated_at": element.updated_at == null ? null : moment(element.updated_at).format('YYYY-MM-DD HH:mm:ss'),
                     to_user_file_view_path: to_file_dtl.file_view_path,
                     from_user_file_view_path: file_dtl.file_view_path,
+                    blog_file_view_path: blog_file_dtl.file_view_path,
+                    blog_thumbnail_view_path: blog_thumbnail_dtl.file_view_path,
                 }
             })
         );

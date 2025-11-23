@@ -35,6 +35,7 @@ routeapp.post('/accept-or-reject-request', Auth, UsersFriendRequestController.Ac
 routeapp.post('/delete-friend', Auth, UsersFriendRequestController.DeleteFriend)
 routeapp.post('/all-notifications', Auth, AllNotificationController.AllNotifications)
 routeapp.post('/read-notification', Auth, AllNotificationController.ReadThis)
+routeapp.post('/my-friends', Auth, FindFriends.MyFriends)
 routeapp.all(/.*/, async (req, res) => {
     res.status(404).json({ status: 404, message: "route not found..!!" });
 });

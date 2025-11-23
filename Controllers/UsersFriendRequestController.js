@@ -5,9 +5,9 @@ const UsersFriendRequestModel = require('../Models/UsersFriendRequestModel');
 const UsersFriendModel = require('../Models/UsersFriendModel');
 const AllNotificationsModel = require('../Models/AllNotificationsModel');
 const Healper = require('./Healper');
-const { WebsocketController, clients } = require("./WebsocketController");
+const { clients } = require("./WebsocketController");
 const new_friend_request = process.env.new_friend_request;
-const cencel_friend_request = process.env.cencel_friend_request;
+const cancel_friend_request = process.env.cancel_friend_request;
 const accept_friend_request = process.env.accept_friend_request;
 const reject_friend_request = process.env.reject_friend_request;
 const remove_friend = process.env.remove_friend;
@@ -153,9 +153,9 @@ async function CencelRequest(req, resp) {
                 from_user_photo: friend_request[0].from_user_photo,
                 to_user_name: friend_request[0].to_user_name,
                 to_user_photo: friend_request[0].to_user_photo,
-                category: cencel_friend_request,
+                category: cancel_friend_request,
                 remove_byid: '',
-                text: `${friend_request[0].from_user_name} cencel friend request.`,
+                text: `${friend_request[0].from_user_name} cancel friend request.`,
                 read_status: 0
             });
             notification = await notification.save();
@@ -190,7 +190,7 @@ async function CencelRequest(req, resp) {
                 created_at: moment(notification.created_at).format('YYYY-MM-DD HH:mm:ss'),
             };
             if (clients[to]) {
-                let data = { "code": cencel_friend_request, "message": "cencel friend request", 'result': reset_notification }
+                let data = { "code": cancel_friend_request, "message": "cencel friend request", 'result': reset_notification }
                 clients[to].sendUTF(JSON.stringify(data));
             }
             return resp.status(200).json({ "status": 200, "message": "Success", 'result': delete_request, 'delete_friend': delete_friend });
@@ -355,6 +355,17 @@ async function DeleteFriend(req, resp) {
         }
         if (!user_id) {
             return resp.status(200).json({ 'status': 400, 'message': 'user id required.' });
+        }
+        const check_user_accept_satus = await UsersFriendModel.find({
+            $and: [
+                { 'requestid': new mongodb.ObjectId(requestid) },
+                { 'delete': 0 }
+            ]
+        }).countDocuments();
+        if (check_user_accept_satus <= 0) {
+            let delete_friend = await UsersFriendModel.deleteMany({ 'requestid': new mongodb.ObjectId(requestid) });
+            let delete_request = await UsersFriendRequestModel.deleteOne({ '_id': new mongodb.ObjectId(requestid) });
+            return resp.status(200).json({ "status": 300, "message": "Success", 'result': delete_request, 'delete_friend': delete_friend });
         }
         let user_friend_request_model = new UsersFriendRequestModel;
         let friend_request = await user_friend_request_model.checkByRequestId(requestid);
