@@ -388,6 +388,87 @@ async function MyFriends(req, resp) {
                 }
             },
             {
+                $lookup: {
+                    from: "users_friend_requests",
+                    let: {
+                        me: new mongodb.ObjectId(user_id),  // logged user
+                        other: "$_id"                       // loop user
+                    },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+
+                                    $and: [
+                                        { $eq: ["$delete", 0] },
+                                        {
+                                            $or: [
+                                                {
+                                                    $and: [
+                                                        { $eq: ["$from", "$$me"] },
+                                                        { $eq: ["$to", "$$other"] }
+                                                    ]
+                                                },
+                                                {
+                                                    $and: [
+                                                        { $eq: ["$from", "$$other"] },
+                                                        { $eq: ["$to", "$$me"] }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+
+                                }
+                            }
+                        },
+                        // Join the FROM user details
+                        {
+                            $lookup: {
+                                from: "users",
+                                localField: "from",
+                                foreignField: "_id",
+                                as: "from_user_detail"
+                            }
+                        },
+                        { $unwind: { path: "$from_user_detail", preserveNullAndEmptyArrays: true } },
+
+                        // Join the TO user details
+                        {
+                            $lookup: {
+                                from: "users",
+                                localField: "to",
+                                foreignField: "_id",
+                                as: "to_user_detail"
+                            }
+                        },
+                        { $unwind: { path: "$to_user_detail", preserveNullAndEmptyArrays: true } },
+
+                        // Select fields you want
+                        {
+                            $project: {
+                                from: 1,
+                                to: 1,
+                                accept_status: 1,
+                                created_at: 1,
+
+                                from_user_name: "$from_user_detail.name",
+                                from_user_photo: "$from_user_detail.photo",
+
+                                to_user_name: "$to_user_detail.name",
+                                to_user_photo: "$to_user_detail.photo",
+                            }
+                        }
+                    ],
+                    as: "friend_request"
+                }
+            },
+            {
+                $addFields: {
+                    check_friend_request: { $size: "$friend_request" }
+                }
+            },
+            {
                 $match: {
                     is_friend: { $gt: 0 }
                 }
@@ -455,6 +536,8 @@ async function MyFriends(req, resp) {
                     "country": element.country == undefined ? "" : element.country,
                     "is_friend": element.is_friend,
                     "total_friend": element.total_friend,
+                    "check_friend_request": element.check_friend_request,
+                    "friend_request": element.check_friend_request > 0 ? element.friend_request[0] : null,
                     "wsstatus": element.wsstatus,
                 }
             })
