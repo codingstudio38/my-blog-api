@@ -9,7 +9,7 @@ const BlogSchema = new mongooseConnect.Schema({
     content: { type: String, required: true, trim: true },
     photo: { type: String, required: true, trim: true, },
     thumbnail: { type: String, required: false, trim: true, },
-    content_alias: { type: String, required: true, trim: true, },
+    content_alias: { type: String, required: false, trim: true, },
     active_status: { type: Number, required: false, default: 1 },
     delete: { type: Number, required: false, default: 0 },
     created_at: { type: Date, required: true, default: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss') },//new Date()

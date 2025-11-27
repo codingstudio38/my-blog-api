@@ -176,7 +176,7 @@ async function CreactBlog(req, resp) {
                     to_user_name: element.to_user_name,
                     to_user_photo: element.to_user_photo,
                     category: blog_post_status,
-                    remove_byid: '',
+                    remove_byid: Blog.content_alias,
                     blog_id: Blog._id,
                     text: Blog.title,
                     read_status: 0
@@ -377,6 +377,89 @@ async function BlogByid(req, resp) {
     }
 }
 
+async function BlogByAlias(req, resp) {
+    try {
+        let { id = '' } = req.params;
+        if (!id) {
+            return resp.status(200).json({ "status": 500, "message": 'id required', 'result': {} });
+        }
+        let list = await BlogsModel.aggregate([
+            { $match: { $and: [{ content_alias: id }, { delete: 0 }] } },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "user_id",
+                    foreignField: "_id",
+                    as: "user_detail"
+                }
+            },
+            { $unwind: { path: "$user_detail", preserveNullAndEmptyArrays: true } },
+            {
+                $lookup: {
+                    from: "blog_categories",
+                    localField: "blog_type",
+                    foreignField: "_id",
+                    as: "category_detail"
+                }
+            },
+            { $unwind: { path: "$category_detail", preserveNullAndEmptyArrays: true } },
+            { $sort: { _id: -1 } },
+            {
+                $project: {
+                    _id: 1,
+                    title: 1,
+                    content: 1,
+                    photo: 1,
+                    content_alias: 1,
+                    active_status: 1,
+                    created_at: 1,
+                    updated_at: 1,
+                    blog_type: 1,
+                    sort_description: 1,
+                    user_name: "$user_detail.name",
+                    user_photo: "$user_detail.photo",
+                    category_type_name: "$category_detail.name",
+                    thumbnail: 1,
+                }
+            }
+        ]);
+        let blogs = await Promise.all(
+            list.map(async (element) => {
+                let file_name = `${element.photo}`;
+                let file_path = `${Healper.storageFolderPath()}user-blogs/${file_name}`;
+                let file_view_path = `${APP_STORAGE}user-blogs/${file_name}`;
+                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+
+                let user_file_name = `${element.user_photo}`;
+                let user_file_path = `${Healper.storageFolderPath()}users/${user_file_name}`;
+                let user_file_view_path = `${APP_STORAGE}users/${user_file_name}`;
+                let user_file_dtl = await Healper.FileInfo(user_file_name, user_file_path, user_file_view_path);
+
+                let thumbnail_name = `${element.thumbnail}`;
+                let thumbnail_path = `${Healper.storageFolderPath()}user-blogs/thumbnail/${thumbnail_name}`;
+                let thumbnail_view_path = `${APP_STORAGE}user-blogs/thumbnail/${thumbnail_name}`;
+                let thumbnail_dtl = await Healper.FileInfo(thumbnail_name, thumbnail_path, thumbnail_view_path);
+                return {
+                    ...element,
+                    "created_at": moment(element.created_at).format('YYYY-MM-DD HH:mm:ss'),
+                    "updated_at": element.updated_at == null ? null : moment(element.updated_at).format('YYYY-MM-DD HH:mm:ss'),
+                    "thumbnail_dtl": thumbnail_dtl,
+                    "user_file_dtl": user_file_dtl,
+                    "file_dtl": file_dtl,
+                }
+            })
+        )
+
+        let data = {
+            result: blogs,
+            total: blogs.length > 0 ? 1 : 0
+        };
+        return resp.status(200).json({ "status": 200, "message": "Success", 'result': data });
+    } catch (error) {
+        return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
+    }
+}
+
 async function DeleteBlogByid(req, resp) {
     try {
         let { id = '' } = req.params;
@@ -522,4 +605,4 @@ async function BlogsCategoryList(req, resp) {
 }
 
 
-module.exports = { UplodePhoto, CreactBlog, Myblogs, BlogByid, DeleteBlogByid, UpdateBlog, BlogsCategoryList, UplodeThumbnail };
+module.exports = { UplodePhoto, CreactBlog, Myblogs, BlogByid, DeleteBlogByid, UpdateBlog, BlogsCategoryList, UplodeThumbnail, BlogByAlias };
