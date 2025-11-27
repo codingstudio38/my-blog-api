@@ -199,7 +199,7 @@ async function CreactBlog(req, resp) {
 async function Myblogs(req, resp) {
     try {
         let { limit = 5, page = 1 } = req.query;
-        let { title = '', user_id = '' } = req.body;
+        let { title = '', user_id = '', blog_type = '' } = req.body;
         let skip = 0;
         limit = parseInt(limit);
         page = parseInt(page);
@@ -211,6 +211,9 @@ async function Myblogs(req, resp) {
         }
         if (user_id !== '') {
             andConditions.push({ user_id: new mongodb.ObjectId(user_id) });
+        }
+        if (blog_type !== '') {
+            andConditions.push({ blog_type: new mongodb.ObjectId(blog_type) });
         }
         andConditions.push({ delete: 0 });
         let query = andConditions.length > 0 ? { $and: andConditions } : {};
