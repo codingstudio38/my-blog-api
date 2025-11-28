@@ -1,6 +1,9 @@
 const path = require('path');
 const fs = require('fs');
 const mime = require('mime');
+const CryptoJS = require('crypto-js');
+const data_secretKey = 'bc665a1f223dba15f5fbf5df08838647';  // 16-byte key
+const data_ivString = 'bc66-f223-dba1-8647-2345-fd45-dfg3';
 function PaginationData(data, total, limitis, pageis) {
     try {
         var totalpage, nextPage, record_from, record_to, hasNextPage, hasPrevPage, prevPage, page_links, skip, currentPage = 0, previous = 0, lastPage = 0, page = 0, limit = 0;
@@ -114,4 +117,28 @@ async function FileExists(filePath) {
         throw new Error(error.message);
     }
 }
-module.exports = { PaginationData, storageFolderPath, generateRandomString, FileInfo, DeleteFile, FileExists };
+
+const data_decrypt = async (encryptedData) => {
+    const iv = CryptoJS.enc.Utf8.parse(data_ivString);
+    const key = CryptoJS.enc.Utf8.parse(data_secretKey);
+    const decrypted = CryptoJS.AES.decrypt(encryptedData, key, {
+        iv: iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+    });
+    const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
+    return decryptedText;
+};
+
+
+const data_encrypt = async (data) => {
+    const iv = CryptoJS.enc.Utf8.parse(data_ivString);
+    const key = CryptoJS.enc.Utf8.parse(data_secretKey);
+    const encrypted = CryptoJS.AES.encrypt(data, key, {
+        iv: iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+    });
+    return encrypted.toString();
+};
+module.exports = { PaginationData, storageFolderPath, generateRandomString, FileInfo, DeleteFile, FileExists, data_decrypt, data_encrypt };
