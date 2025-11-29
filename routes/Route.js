@@ -9,6 +9,7 @@ const FindFriends = require("./../Controllers/FindFriends");
 const AllNotificationController = require("./../Controllers/AllNotificationController");
 const UsersFriendRequestController = require("./../Controllers/UsersFriendRequestController");
 const VideoPlayerController = require("./../Controllers/VideoPlayerController");
+const ChatController = require("./../Controllers/ChatController");
 routeapp.get('/', async (req, resp) => {
     return resp.status(200).json({ "status": 200, "message": "Success" });
 })
@@ -40,8 +41,12 @@ routeapp.post('/accept-or-reject-request', Auth, UsersFriendRequestController.Ac
 routeapp.post('/delete-friend', Auth, UsersFriendRequestController.DeleteFriend)
 routeapp.post('/all-notifications', Auth, AllNotificationController.AllNotifications)
 routeapp.post('/read-notification', Auth, AllNotificationController.ReadThis)
-routeapp.get("/video-player", VideoPlayerController.NodeJSStreams);//video blob url
+routeapp.get("/video-player", Auth, VideoPlayerController.NodeJSStreams);//video blob url
 routeapp.get("/video", VideoPlayerController.NodeJSStreams_OLD);
+routeapp.post('/upload-chat-file', Auth, ChatController.UploadChatFile);
+routeapp.post("/save-user-chat", Auth, ChatController.SaveChat);
+routeapp.post('/chat-list', Auth, ChatController.ChatList);
+routeapp.post('/find-chat', Auth, ChatController.FindChat);
 routeapp.all(/.*/, async (req, res) => {
     res.status(404).json({ status: 404, message: "route not found..!!" });
 });
