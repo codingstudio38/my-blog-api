@@ -3,6 +3,8 @@ const moment = require('moment-timezone');
 const mongoose = require('mongoose');
 const UsersModel = require('../Models/UsersModel');
 const UsersChatModel = require('../Models/UsersChatModel');
+const UsersFriendModel = require('../Models/UsersFriendModel');
+const AllNotificationsModel = require('../Models/AllNotificationsModel');
 const { clients } = require("./WebsocketController");
 const Healper = require('./Healper');
 const bcrypt = require("bcrypt");
@@ -11,7 +13,7 @@ const path = require('path');
 const fs = require('fs');
 const APP_URL = process.env.APP_URL;
 const APP_STORAGE = process.env.APP_STORAGE;
-
+const new_chat_message = process.env.new_chat_message;
 async function UploadChatFile(req, resp) {
     try {
         let { userid = '' } = req.body;
@@ -256,14 +258,16 @@ async function SaveChat(req, resp) {
             read_status: 0,
         });
         if (file_name !== '') {
-            if (!fs.existsSync(`${file_path}`)) {
-                return resp.status(200).json({ 'status': 400, 'message': 'file not found required.' });
-            }
-            await fs.rename(file_path, new_file_path, (err) => {
-                if (err) {
-                    return resp.status(200).json({ 'status': 400, 'message': 'Error moving file' });
+            if (!fs.existsSync(`${new_file_path}`)) {
+                if (!fs.existsSync(`${file_path}`)) {
+                    return resp.status(200).json({ 'status': 400, 'message': 'file not found required.' });
                 }
-            })
+                await fs.rename(file_path, new_file_path, (err) => {
+                    if (err) {
+                        return resp.status(200).json({ 'status': 400, 'message': 'Error moving file' });
+                    }
+                })
+            }
             NewChat['chat_file'] = file_name;
         }
         let chat = await NewChat.save();
@@ -274,6 +278,50 @@ async function SaveChat(req, resp) {
         let file_dtl1 = await Healper.FileInfo(file_name1, file_path1, file_view_path1);
         let rest_chat = { ...chat._doc, file_dtl: file_dtl1 };
 
+
+
+        let user_friends_model = new UsersFriendModel;
+        let friends_list = await user_friends_model.getAllMyFriendByid(from_user);
+        let notify_ = {
+            notify_toid: to_user,
+            userid: from_user,
+            requestid: friends_list[0].requestid,
+            from: from_user,
+            to: to_user,
+            accept_status: 0,
+            from_user_name: friends_list[0].from_user_name,
+            from_user_photo: friends_list[0].from_user_photo,
+            to_user_name: friends_list[0].to_user_name,
+            to_user_photo: friends_list[0].to_user_photo,
+            category: new_chat_message,
+            remove_byid: '',
+            blog_id: rest_chat._id,
+            text: message,
+            read_status: 0
+        };
+
+        let notification = new AllNotificationsModel(notify_);
+        notification = await notification.save();
+
+        let noti_file_name = friends_list[0].from_user_photo;
+        let noti_file_path = `${Healper.storageFolderPath()}users/${noti_file_name}`;
+        let noti_file_view_path = `${APP_STORAGE}users/${noti_file_name}`;
+        let noti_file_dtl = await Healper.FileInfo(noti_file_name, noti_file_path, noti_file_view_path);
+        let noti_to_file_name = friends_list[0].to_user_photo;
+        let noti_to_file_path = `${Healper.storageFolderPath()}users/${noti_to_file_name}`;
+        let noti_to_file_view_path = `${APP_STORAGE}users/${noti_to_file_name}`;
+        let noti_to_file_dtl = await Healper.FileInfo(noti_to_file_name, noti_to_file_path, noti_to_file_view_path);
+
+        let rest_notification = {
+            ...notification._doc,
+            to_user_file_view_path: noti_to_file_dtl.file_view_path,
+            from_user_file_view_path: noti_file_dtl.file_view_path,
+            created_at: moment(notification.created_at).format('YYYY-MM-DD HH:mm:ss'),
+        }
+        if (clients[to_user]) {
+            let data = { "code": new_chat_message, "message": "new chat message", 'result': rest_notification, chat: rest_chat }
+            clients[to_user].sendUTF(JSON.stringify(data));
+        }
         return resp
             .status(200)
             .json({
@@ -288,4 +336,23 @@ async function SaveChat(req, resp) {
     }
 }
 
-module.exports = { UploadChatFile, ChatList, FindChat, SaveChat }
+async function UpdateUnreadMessage(req, resp) {
+    try {
+        let { from, to } = req.body;
+
+        let updateis = await UsersChatModel.updateMany(
+            { $and: [{ from_user: new mongodb.ObjectId(from) }, { to_user: new mongodb.ObjectId(to) }] },
+            { $set: { read_status: 1 } },
+            { returnDocument: "after" }
+        ); // returnDocument: 'after', new: true, useFindAndModify: false, returnOriginal: false,
+        return resp
+            .status(200)
+            .json({ status: 200, message: "Success", data: updateis });
+    } catch (error) {
+        return resp
+            .status(400)
+            .json({ status: 400, message: "Failed..!!", error: error.message });
+    }
+}
+
+module.exports = { UploadChatFile, ChatList, FindChat, SaveChat, UpdateUnreadMessage }

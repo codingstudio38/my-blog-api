@@ -47,6 +47,7 @@ routeapp.post('/upload-chat-file', Auth, ChatController.UploadChatFile);
 routeapp.post("/save-user-chat", Auth, ChatController.SaveChat);
 routeapp.post('/chat-list', Auth, ChatController.ChatList);
 routeapp.post('/find-chat', Auth, ChatController.FindChat);
+routeapp.post("/update-read-status", Auth, ChatController.UpdateUnreadMessage);
 routeapp.all(/.*/, async (req, res) => {
     res.status(404).json({ status: 404, message: "route not found..!!" });
 });

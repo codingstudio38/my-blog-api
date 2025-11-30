@@ -469,6 +469,33 @@ async function MyFriends(req, resp) {
                 }
             },
             {
+                $lookup: {
+                    from: "users_chats",
+                    let: { from_: "$_id", to_: new mongodb.ObjectId(user_id) },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$from_user", "$$from_"] },
+                                        { $eq: ["$to_user", "$$to_"] },
+                                        { $eq: ["$read_status", 0] },
+                                        { $eq: ["$delete", 0] }
+                                    ]
+                                }
+                            }
+                        },
+                    ],
+                    as: "user_chats"
+                }
+
+            },
+            {
+                $addFields: {
+                    total_unread_message: { $size: "$user_chats" }
+                }
+            },
+            {
                 $match: {
                     is_friend: { $gt: 0 }
                 }
@@ -539,6 +566,7 @@ async function MyFriends(req, resp) {
                     "check_friend_request": element.check_friend_request,
                     "friend_request": element.check_friend_request > 0 ? element.friend_request[0] : null,
                     "wsstatus": element.wsstatus,
+                    "total_unread_message": element.total_unread_message,
                 }
             })
         );

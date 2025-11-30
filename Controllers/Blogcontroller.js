@@ -115,18 +115,20 @@ async function CreactBlog(req, resp) {
         }
         content_alias = title.trim().replaceAll(" ", "-");
         content_alias = `${content_alias}-${Healper.generateRandomString(6)}`;
-        if (!fs.existsSync(`${blog_file_path}`)) {
-            return resp.status(200).json({ 'status': 400, 'message': 'file not found required.' });
-        }
-        const p_path = `${Healper.storageFolderPath()}user-blogs`;
-        if (!fs.existsSync(p_path)) {
-            fs.mkdirSync(p_path, { recursive: true });
-        }
-        await fs.rename(blog_file_path, new_blog_file_path, (err) => {
-            if (err) {
-                return resp.status(200).json({ 'status': 400, 'message': 'Error moving file' });
+        if (!fs.existsSync(`${new_blog_file_path}`)) {
+            if (!fs.existsSync(`${blog_file_path}`)) {
+                return resp.status(200).json({ 'status': 400, 'message': 'file not found required.' });
             }
-        })
+            const p_path = `${Healper.storageFolderPath()}user-blogs`;
+            if (!fs.existsSync(p_path)) {
+                fs.mkdirSync(p_path, { recursive: true });
+            }
+            await fs.rename(blog_file_path, new_blog_file_path, (err) => {
+                if (err) {
+                    return resp.status(200).json({ 'status': 400, 'message': 'Error moving file' });
+                }
+            })
+        }
         let data = {
             user_id: user_id,
             title: title,
@@ -145,14 +147,16 @@ async function CreactBlog(req, resp) {
             let thumbnail_file_path = `${Healper.storageFolderPath()}user-blogs/temp/user-blogs-thumbnail/user${user_id}/${thumbnail}`;
             let new_thumbnail_file_path = `${Healper.storageFolderPath()}user-blogs/thumbnail/${thumbnail}`;
             const t_path = `${Healper.storageFolderPath()}user-blogs/thumbnail`;
-            if (!fs.existsSync(t_path)) {
-                fs.mkdirSync(t_path, { recursive: true });
-            }
-            await fs.rename(thumbnail_file_path, new_thumbnail_file_path, (err) => {
-                if (err) {
-                    return resp.status(200).json({ 'status': 400, 'message': 'Error moving thumbnail' });
+            if (!fs.existsSync(new_thumbnail_file_path)) {
+                if (!fs.existsSync(t_path)) {
+                    fs.mkdirSync(t_path, { recursive: true });
                 }
-            })
+                await fs.rename(thumbnail_file_path, new_thumbnail_file_path, (err) => {
+                    if (err) {
+                        return resp.status(200).json({ 'status': 400, 'message': 'Error moving thumbnail' });
+                    }
+                })
+            }
             data['thumbnail'] = thumbnail;
         }
 
@@ -525,20 +529,23 @@ async function UpdateBlog(req, resp) {
 
         if (thumbnail !== '') {
             const t_path = `${Healper.storageFolderPath()}user-blogs/thumbnail`;
-            if (!fs.existsSync(t_path)) {
-                fs.mkdirSync(t_path, { recursive: true });
-            }
-            if (fs.existsSync(`${thumbnail_file_path}`)) {
-                await fs.rename(thumbnail_file_path, new_thumbnail_file_path, (err) => {
-                    if (err) {
-                        return resp.status(200).json({ 'status': 400, 'message': 'Error moving file' });
-                    }
-                })
-                update['thumbnail'] = thumbnail;
-            } else {
-                return resp.status(200).json({ 'status': 400, 'message': 'thumbnail file not found required.' });
+            if (!fs.existsSync(new_thumbnail_file_path)) {
+                if (!fs.existsSync(t_path)) {
+                    fs.mkdirSync(t_path, { recursive: true });
+                }
+                if (fs.existsSync(`${thumbnail_file_path}`)) {
+                    await fs.rename(thumbnail_file_path, new_thumbnail_file_path, (err) => {
+                        if (err) {
+                            return resp.status(200).json({ 'status': 400, 'message': 'Error moving file' });
+                        }
+                    })
+                    update['thumbnail'] = thumbnail;
+                } else {
+                    return resp.status(200).json({ 'status': 400, 'message': 'thumbnail file not found required.' });
+                }
             }
         }
+
         if (blog_type == "691beef0c2cfd41cc117ef71" || blog_type == "691beef0c2cfd41cc117ef6f" || blog_type == "691beef0c2cfd41cc117ef6e") {
 
         } else {
@@ -547,18 +554,20 @@ async function UpdateBlog(req, resp) {
 
         if (photo !== "") {
             const p_path = `${Healper.storageFolderPath()}user-blogs`;
-            if (!fs.existsSync(p_path)) {
-                fs.mkdirSync(p_path, { recursive: true });
-            }
-            if (fs.existsSync(`${blog_file_path}`)) {
-                await fs.rename(blog_file_path, new_blog_file_path, (err) => {
-                    if (err) {
-                        return resp.status(200).json({ 'status': 400, 'message': 'Error moving file' });
-                    }
-                })
-                update['photo'] = photo;
-            } else {
-                return resp.status(200).json({ 'status': 400, 'message': 'file not found required.' });
+            if (!fs.existsSync(new_blog_file_path)) {
+                if (!fs.existsSync(p_path)) {
+                    fs.mkdirSync(p_path, { recursive: true });
+                }
+                if (fs.existsSync(`${blog_file_path}`)) {
+                    await fs.rename(blog_file_path, new_blog_file_path, (err) => {
+                        if (err) {
+                            return resp.status(200).json({ 'status': 400, 'message': 'Error moving file' });
+                        }
+                    })
+                    update['photo'] = photo;
+                } else {
+                    return resp.status(200).json({ 'status': 400, 'message': 'file not found required.' });
+                }
             }
         }
         let Blog = await BlogsModel.findByIdAndUpdate(
