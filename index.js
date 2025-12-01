@@ -1,6 +1,7 @@
 try {
     require("dotenv").config();
     const PORT = process.env.PORT;
+    const HOST = process.env.HOST;
     const path = require("path");
     const Fileupload = require("express-fileupload");
     var cors = require("cors");
@@ -26,8 +27,8 @@ try {
     app.use("/uploads", express.static("./storage/"));
     app.use("/public", express.static("./public/"));
     app.use(require("./routes/Route"));
-    app.listen(PORT, () => {
-        console.log(`node server running on :http://localhost:${process.env.PORT}`);
+    app.listen(PORT,HOST, () => {
+        console.log(`node server running on :http://${HOST}:${process.env.PORT}`);
     });
     console.log(`cluster is working. pid:${process.pid}`);
 } catch (error) {

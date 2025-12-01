@@ -4,6 +4,7 @@ const webSocketServer = require("websocket").server;
 const UsersModel = require("./../Models/UsersModel");
 const UsersFriendModel = require('../Models/UsersFriendModel');
 const SOCKET_PORT = process.env.SOCKETPORT;
+const SOCKET_HOST = process.env.SOCKETHOST;
 const new_client = process.env.new_client;
 const client_disconnected = process.env.client_disconnected;
 const new_message_receive = process.env.new_message_receive;
@@ -15,7 +16,9 @@ function originIsAllowed(origin) {
 }
 const runWsServer = async () => {
     const serverForWs = http.createServer();
-    serverForWs.listen(SOCKET_PORT);
+    serverForWs.listen(SOCKET_PORT, SOCKET_HOST, () => {
+        console.log(`WebSocket HTTP server running at ws://${SOCKET_HOST}:${SOCKET_PORT}`);
+    });
 
     const wsServer = new webSocketServer({
         httpServer: serverForWs,
@@ -65,13 +68,19 @@ const runWsServer = async () => {
 
         connection.on("message", function (message) {
             if (message.type === "utf8") {
-                console.log("Received Message:", message.utf8Data);
-                let data = {
-                    ...message, clientid: userID, code: new_message_receive, msg: "Received message.",
-                };
-                // Broadcast message to all clients
-                for (let key in clients) {
-                    clients[key].sendUTF(JSON.stringify(data));
+                let jsonpars = JSON.parse(message.utf8Data);
+                if (jsonpars?.action == 'send-offer') {
+                    jsonpars = { ...jsonpars, code: 'send-offer' }
+                    if (jsonpars.to) {
+                        clients[jsonpars.to].sendUTF(JSON.stringify(jsonpars));
+                    }
+                } else {
+                    let data = {
+                        ...message, clientid: userID, code: new_message_receive, msg: "Received message.",
+                    };
+                    for (let key in clients) {
+                        clients[key].sendUTF(JSON.stringify(data));
+                    }
                 }
             } else if (message.type === "binary") {
                 console.log("Received Binary Message of " + message.binaryData.length + " bytes");
