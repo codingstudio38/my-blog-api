@@ -137,6 +137,7 @@ async function CreactBlog(req, resp) {
             content_alias: content_alias,
             blog_type: blog_type,
             sort_description: sort_description,
+            created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
         };
         if (blog_type == "691beef0c2cfd41cc117ef71" || blog_type == "691beef0c2cfd41cc117ef6f" || blog_type == "691beef0c2cfd41cc117ef6e") {
 
@@ -183,7 +184,8 @@ async function CreactBlog(req, resp) {
                     remove_byid: Blog.content_alias,
                     blog_id: Blog._id,
                     text: Blog.title,
-                    read_status: 0
+                    read_status: 0,
+                    created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
                 })
                 if (clients[element.to_user_id]) {
                     let data = { "code": blog_post_status, "message": "new blog post", 'result': Blog._id }

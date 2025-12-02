@@ -145,11 +145,29 @@ async function ReadThis(req, resp) {
             console.log('ws user id required');
             return 0;
         }
-        let updateis = await AllNotificationsModel.updateOne({ _id: id }, { $set: { read_status: 1 } });
+        let updateis = await AllNotificationsModel.updateOne({ _id: id }, {
+            $set: {
+                read_status: 1,
+                updated_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+            }
+        });
         return resp.status(200).json({ "status": 200, "message": "Successfully updated", 'result': updateis });
     } catch (error) {
         return resp.status(200).json({ "status": 200, "message": "Failed to update", 'result': [] });
     }
 }
 
-module.exports = { AllNotifications, ReadThis }
+async function ClearAll(req, resp) {
+    try {
+        let { user_id = '' } = req.body;
+        if (user_id == "") {
+            return resp.status(200).json({ "status": 200, "message": "user id required!", 'result': [] });
+        }
+        let updateis = await AllNotificationsModel.updateMany({ notify_toid: new mongodb.ObjectId(user_id) }, { $set: { read_status: 1 } });
+        return resp.status(200).json({ "status": 200, "message": "Successfully updated", 'result': updateis });
+    } catch (error) {
+        return resp.status(200).json({ "status": 200, "message": "Failed to update", 'result': [] });
+    }
+}
+
+module.exports = { AllNotifications, ReadThis, ClearAll }

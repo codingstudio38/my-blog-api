@@ -79,6 +79,7 @@ async function CreateUser(req, resp) {
             phone: phone,
             email: email,
             password: password_,
+            created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
         });
         NewUser = await NewUser.save();
         return resp.status(200).json({ "status": 200, "message": "Success", 'result': NewUser });
