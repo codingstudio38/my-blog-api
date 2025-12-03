@@ -69,8 +69,18 @@ const runWsServer = async () => {
         connection.on("message", function (message) {
             if (message.type === "utf8") {
                 let jsonpars = JSON.parse(message.utf8Data);
-                if (jsonpars?.action == 'send-offer') {
-                    jsonpars = { ...jsonpars, code: 'send-offer' }
+                if (jsonpars?.code == 'send-offer') {
+                    jsonpars = { ...jsonpars }
+                    if (jsonpars.to) {
+                        clients[jsonpars.to].sendUTF(JSON.stringify(jsonpars));
+                    }
+                } else if (jsonpars?.code == 'answer-made') {
+                    jsonpars = { ...jsonpars }
+                    if (jsonpars.to) {
+                        clients[jsonpars.to].sendUTF(JSON.stringify(jsonpars));
+                    }
+                } else if (jsonpars?.code == 'ice-candidate') {
+                    jsonpars = { ...jsonpars }
                     if (jsonpars.to) {
                         clients[jsonpars.to].sendUTF(JSON.stringify(jsonpars));
                     }
