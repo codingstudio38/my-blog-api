@@ -174,7 +174,10 @@ async function Videothumbnail(req, resp) {
         });
         let thumbs = {};
         let thumbsbase64 = '';
-        await thumlist.then(data => { console.clear(); console.log(data); thumbs = data; }).catch(err => { throw err; });
+        await thumlist.then(data => {
+            // console.clear(); console.log(data); 
+            thumbs = data;
+        }).catch(err => { throw err; });
         const mime = 'image/jpeg';
 
         // const file = fs.readFileSync(file_full_path_name).toString("base64");
@@ -184,7 +187,7 @@ async function Videothumbnail(req, resp) {
             fs.readFile(file_full_path_name, (err, data) => {
                 if (err) reject(err);
                 console.clear();
-                console.log(data);
+                // console.log(data);
                 // console.log(data==undefined);
                 if (data == undefined) { reject('File data is undefined'); }
                 resolve(data.toString("base64"));
