@@ -49,6 +49,7 @@ routeapp.post('/chat-list', Auth, ChatController.ChatList);
 routeapp.post('/find-chat', Auth, ChatController.FindChat);
 routeapp.post("/update-read-status", Auth, ChatController.UpdateUnreadMessage);
 routeapp.post("/clear-all-notifications", Auth, AllNotificationController.ClearAll);
+routeapp.post("/video-thumbnail", Auth, VideoPlayerController.Videothumbnail);
 routeapp.all(/.*/, async (req, res) => {
     res.status(404).json({ status: 404, message: "route not found..!!" });
 });

@@ -32,5 +32,11 @@ try {
     });
     console.log(`cluster is working. pid:${process.pid}`);
 } catch (error) {
-    console.error(`Failed to run node server! ${error.message}`);
+    app.use((err, req, res, next) => {
+        res.status(500).json({
+            status: 500,
+            message: error.message,
+            data: false
+        });
+    });
 } 
