@@ -6,6 +6,9 @@ const UsersFriendModel = require('../Models/UsersFriendModel');
 const BlogsModel = require('../Models/BlogsModel');
 const BlogsCategoryModel = require('../Models/BlogCategoryModel');
 const AllNotificationsModel = require('../Models/AllNotificationsModel');
+const CommentsModel = require('../Models/CommentModel');
+const LikesModel = require('../Models/LikesModel');
+const SharesModel = require('../Models/SharesModel');
 const { clients } = require("./WebsocketController");
 const Healper = require('./Healper');
 const bcrypt = require("bcrypt");
@@ -618,5 +621,103 @@ async function BlogsCategoryList(req, resp) {
     }
 }
 
+async function LikeAndDislike(req, resp) {
+    try {
+        let { user_id = '', blog_id = '', status = 0 } = req.body;
 
-module.exports = { UplodePhoto, CreactBlog, Myblogs, BlogByid, DeleteBlogByid, UpdateBlog, BlogsCategoryList, UplodeThumbnail, BlogByAlias };
+        if (!user_id) {
+            return resp.status(200).json({ 'status': 400, 'message': 'user id required.' });
+        }
+        if (!blog_id) {
+            return resp.status(200).json({ 'status': 400, 'message': 'blog id required.' });
+        }
+        let like = {};
+        if (status == 1) {
+            let data = {
+                user_id: user_id,
+                blog_id: blog_id,
+                delete: 0,
+                created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+            };
+            like = new LikesModel(data);
+            like = await like.save();
+        } else {
+            like = await LikesModel.deleteOne({
+                $and: [
+                    { blog_id: new mongodb.ObjectId(blog_id) },
+                    { user_id: new mongodb.ObjectId(user_id) }
+                ]
+            });
+        }
+        let total = await LikesModel
+            .find({
+                $and: [
+                    { blog_id: new mongodb.ObjectId(blog_id) },
+                    { delete: 0 }
+                ]
+            })
+            .countDocuments();
+        return resp.status(200).json({ "status": 200, "message": "Success", 'result': like, total: total });
+    } catch (error) {
+        return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
+    }
+}
+
+async function Comment(req, resp) {
+    try {
+        let { user_id = '', blog_id = '', status = 0, commen = '' } = req.body;
+
+        if (!user_id) {
+            return resp.status(200).json({ 'status': 400, 'message': 'user id required.' });
+        }
+        if (!blog_id) {
+            return resp.status(200).json({ 'status': 400, 'message': 'blog id required.' });
+        }
+        if (!commen) {
+            return resp.status(200).json({ 'status': 400, 'message': 'commen required.' });
+        }
+        let insert_data = {};
+        if (status == 1) {
+            let data = {
+                user_id: user_id,
+                blog_id: blog_id,
+                comment: commen,
+                delete: 0,
+                created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+            };
+            insert_data = new CommentsModel(data);
+            insert_data = await insert_data.save();
+        } else if (status == 2) {
+            let data = {
+                comment: commen,
+                updated_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+            };
+            insert_data = await CommentsModel.updateOne({
+                $and: [
+                    { blog_id: new mongodb.ObjectId(blog_id) },
+                    { user_id: new mongodb.ObjectId(user_id) }
+                ]
+            }, { $set: data });
+        } else {
+            insert_data = await CommentsModel.deleteOne({
+                $and: [
+                    { blog_id: new mongodb.ObjectId(blog_id) },
+                    { user_id: new mongodb.ObjectId(user_id) }
+                ]
+            });
+        }
+        let total = await CommentsModel
+            .find({
+                $and: [
+                    { blog_id: new mongodb.ObjectId(blog_id) },
+                    { delete: 0 }
+                ]
+            })
+            .countDocuments();
+        return resp.status(200).json({ "status": 200, "message": "Success", 'result': insert_data, total: total });
+    } catch (error) {
+        return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
+    }
+}
+
+module.exports = { UplodePhoto, CreactBlog, Myblogs, BlogByid, DeleteBlogByid, UpdateBlog, BlogsCategoryList, UplodeThumbnail, BlogByAlias, LikeAndDislike, Comment };

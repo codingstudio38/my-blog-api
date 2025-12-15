@@ -1,6 +1,7 @@
 const moment = require('moment-timezone');
 const BlogsModel = require('../Models/BlogsModel');
 const Healper = require('./Healper');
+const mongodb = require('mongodb');
 const APP_STORAGE = process.env.APP_STORAGE;
 async function Allblogs(req, resp) {
     try {
@@ -19,6 +20,7 @@ async function Allblogs(req, resp) {
         andConditions.push({ delete: 0 });
         let query = andConditions.length > 0 ? { $and: andConditions } : {};
 
+        // user_id
         let list = await BlogsModel.aggregate([
             { $match: query },
             {
@@ -39,6 +41,104 @@ async function Allblogs(req, resp) {
                 }
             },
             { $unwind: { path: "$category_detail", preserveNullAndEmptyArrays: true } },
+            {
+                $lookup: {
+                    from: "likes",
+                    let: { blogid: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$blog_id", "$$blogid"] },
+                                        { $eq: ["$delete", 0] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "total_like"
+                }
+            },
+            {
+                $addFields: {
+                    total_likes: { $size: "$total_like" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "likes",
+                    let: { blogid: "$_id", loggedinuserid: new mongodb.ObjectId(user_id) },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$user_id", "$$loggedinuserid"] },
+                                        { $eq: ["$blog_id", "$$blogid"] },
+                                        { $eq: ["$delete", 0] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "mylike"
+                }
+            },
+            {
+                $addFields: {
+                    mylike: { $size: "$mylike" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "comments",
+                    let: { blogid: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$blog_id", "$$blogid"] },
+                                        { $eq: ["$delete", 0] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "total_comment"
+                }
+            },
+            {
+                $addFields: {
+                    total_comments: { $size: "$total_comment" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "comments",
+                    let: { blogid: "$_id", loggedinuserid: new mongodb.ObjectId(user_id) },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$user_id", "$$loggedinuserid"] },
+                                        { $eq: ["$blog_id", "$$blogid"] },
+                                        { $eq: ["$delete", 0] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "my_comment"
+                }
+            },
+            {
+                $addFields: {
+                    mycomment: { $size: "$my_comment" }
+                }
+            },
             { $sort: { _id: -1 } },
             { $skip: skip },
             { $limit: limit },
@@ -58,6 +158,10 @@ async function Allblogs(req, resp) {
                     user_photo: "$user_detail.photo",
                     category_type_name: "$category_detail.name",
                     thumbnail: 1,
+                    mylike: 1,
+                    total_likes: 1,
+                    total_comments: 1,
+                    mycomment: 1,
                 }
             }
         ]);
@@ -105,6 +209,10 @@ async function Allblogs(req, resp) {
                         "sort_description": element.sort_description,
                         "thumbnail": element.thumbnail,
                         "thumbnail_dtl": thumbnail_dtl,
+                        "mylike": element.mylike,
+                        "total_likes": element.total_likes,
+                        "mycomment": element.mycomment,
+                        "total_comments": element.total_comments,
                     }
                     resetdata.push(obj);
                 });
