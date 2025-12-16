@@ -84,6 +84,7 @@ async function AllNotifications(req, resp) {
                     blog_content_alias: "$blog_details.content_alias",
                     blog_thumbnail: "$blog_details.thumbnail",
                     blog_type: "$blog_details.blog_type",
+                    comment:1,
                 }
             },
             { $skip: skip },
@@ -123,6 +124,7 @@ async function AllNotifications(req, resp) {
                     from_user_file_view_path: file_dtl.file_view_path,
                     blog_file_view_path: blog_file_dtl.file_view_path,
                     blog_thumbnail_view_path: blog_thumbnail_dtl.file_view_path,
+                    comment:element.comment==undefined ? '':element.comment
                 }
             })
         );

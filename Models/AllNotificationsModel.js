@@ -16,6 +16,7 @@ const Schema = new mongooseConnect.Schema({
     to_user_photo: { type: String, required: false, default: '' },
     category: { type: Number, required: true },
     text: { type: String, required: false, default: 'notification' },
+    comment: { type: String, required: false, default: 'comment' },
     read_status: { type: Number, required: false, default: 0 },
     remove_byid: { type: String, required: false, trim: true, },
     delete: { type: Number, required: false, default: 0 },
