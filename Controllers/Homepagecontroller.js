@@ -162,6 +162,7 @@ async function Allblogs(req, resp) {
                     total_likes: 1,
                     total_comments: 1,
                     mycomment: 1,
+                    user_id: 1,
                 }
             }
         ]);
@@ -169,63 +170,33 @@ async function Allblogs(req, resp) {
             .find(query)
             .countDocuments();
         totalpage = Math.ceil(total / limit);
-        let resetdata_is = [];
-        let filedata = new Promise((resolve, reject) => {
-            let resetdata = [];
-            try {
-                list.forEach(async element => {
-                    let file_name = `${element.photo}`;
-                    let file_path = `${Healper.storageFolderPath()}user-blogs/${file_name}`;
-                    let file_view_path = `${APP_STORAGE}user-blogs/${file_name}`;
-                    let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+        let resetdata_is = await Promise.all(
+            list.map(async element => {
+                let file_name = `${element.photo}`;
+                let file_path = `${Healper.storageFolderPath()}user-blogs/${file_name}`;
+                let file_view_path = `${APP_STORAGE}user-blogs/${file_name}`;
+                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
 
-                    let user_file_name = `${element.user_photo}`;
-                    let user_file_path = `${Healper.storageFolderPath()}users/${user_file_name}`;
-                    let user_file_view_path = `${APP_STORAGE}users/${user_file_name}`;
-                    let user_file_dtl = await Healper.FileInfo(user_file_name, user_file_path, user_file_view_path);
+                let user_file_name = `${element.user_photo}`;
+                let user_file_path = `${Healper.storageFolderPath()}users/${user_file_name}`;
+                let user_file_view_path = `${APP_STORAGE}users/${user_file_name}`;
+                let user_file_dtl = await Healper.FileInfo(user_file_name, user_file_path, user_file_view_path);
 
-                    let thumbnail_name = `${element.thumbnail}`;
-                    let thumbnail_path = `${Healper.storageFolderPath()}user-blogs/thumbnail/${thumbnail_name}`;
-                    let thumbnail_view_path = `${APP_STORAGE}user-blogs/thumbnail/${thumbnail_name}`;
-                    let thumbnail_dtl = await Healper.FileInfo(thumbnail_name, thumbnail_path, thumbnail_view_path);
+                let thumbnail_name = `${element.thumbnail}`;
+                let thumbnail_path = `${Healper.storageFolderPath()}user-blogs/thumbnail/${thumbnail_name}`;
+                let thumbnail_view_path = `${APP_STORAGE}user-blogs/thumbnail/${thumbnail_name}`;
+                let thumbnail_dtl = await Healper.FileInfo(thumbnail_name, thumbnail_path, thumbnail_view_path);
 
-
-                    let obj = {
-                        "_id": element._id,
-                        "user_id": element.user_id,
-                        "title": element.title,
-                        "content": element.content,
-                        "photo": element.photo,
-                        "content_alias": element.content_alias,
-                        "active_status": element.active_status,
-                        "file_dtl": file_dtl,
-                        "created_at": moment(element.created_at).format('YYYY-MM-DD HH:mm:ss'),
-                        "updated_at": element.updated_at == null ? null : moment(element.updated_at).format('YYYY-MM-DD HH:mm:ss'),
-                        "user_name": element.user_name,
-                        "user_photo": element.user_photo,
-                        "user_file_dtl": user_file_dtl,
-                        "blog_type": element.blog_type,
-                        "category_type_name": element.category_type_name,
-                        "sort_description": element.sort_description,
-                        "thumbnail": element.thumbnail,
-                        "thumbnail_dtl": thumbnail_dtl,
-                        "mylike": element.mylike,
-                        "total_likes": element.total_likes,
-                        "mycomment": element.mycomment,
-                        "total_comments": element.total_comments,
-                    }
-                    resetdata.push(obj);
-                });
-                resolve(resetdata);
-            } catch (error) {
-                reject(error.message);
-            }
-        });
-        await filedata.then((datais) => {
-            resetdata_is = datais;
-        }).catch((error) => {
-            throw new Error(error);
-        });
+                return {
+                    ...element,
+                    "created_at": moment(element.created_at).format('YYYY-MM-DD HH:mm:ss'),
+                    "updated_at": element.updated_at == null ? null : moment(element.updated_at).format('YYYY-MM-DD HH:mm:ss'),
+                    "thumbnail_dtl": thumbnail_dtl,
+                    "user_file_dtl": user_file_dtl,
+                    "file_dtl": file_dtl,
+                }
+            })
+        );
 
         let data = {
             list: resetdata_is,
