@@ -311,7 +311,8 @@ async function Myblogs(req, resp) {
                                 $expr: {
                                     $and: [
                                         { $eq: ["$blog_id", "$$blogid"] },
-                                        { $eq: ["$delete", 0] }
+                                        { $eq: ["$delete", 0] },
+                                        { $eq: ["$hide_status", 0] },
                                     ]
                                 }
                             }
@@ -336,7 +337,8 @@ async function Myblogs(req, resp) {
                                     $and: [
                                         { $eq: ["$user_id", "$$loggedinuserid"] },
                                         { $eq: ["$blog_id", "$$blogid"] },
-                                        { $eq: ["$delete", 0] }
+                                        { $eq: ["$delete", 0] },
+                                        { $eq: ["$hide_status", 0] },
                                     ]
                                 }
                             }
@@ -549,7 +551,7 @@ async function BlogByAlias(req, resp) {
                                     $and: [
                                         { $eq: ["$user_id", "$$loggedinuserid"] },
                                         { $eq: ["$blog_id", "$$blogid"] },
-                                        { $eq: ["$delete", 0] }
+                                        { $eq: ["$delete", 0] },
                                     ]
                                 }
                             }
@@ -573,7 +575,8 @@ async function BlogByAlias(req, resp) {
                                 $expr: {
                                     $and: [
                                         { $eq: ["$blog_id", "$$blogid"] },
-                                        { $eq: ["$delete", 0] }
+                                        { $eq: ["$delete", 0] },
+                                        { $eq: ["$hide_status", 0] },
                                     ]
                                 }
                             }
@@ -598,7 +601,8 @@ async function BlogByAlias(req, resp) {
                                     $and: [
                                         { $eq: ["$user_id", "$$loggedinuserid"] },
                                         { $eq: ["$blog_id", "$$blogid"] },
-                                        { $eq: ["$delete", 0] }
+                                        { $eq: ["$delete", 0] },
+                                        { $eq: ["$hide_status", 0] },
                                     ]
                                 }
                             }
@@ -825,7 +829,7 @@ async function BlogsCategoryList(req, resp) {
 
 async function LikeAndDislike(req, resp) {
     try {
-        let { user_id = '', blog_id = '', status = 0 } = req.body;
+        let { user_id = '', blog_id = '', status = 0, blog_post_by = '' } = req.body;
 
         if (!user_id) {
             return resp.status(200).json({ 'status': 400, 'message': 'user id required.' });
@@ -833,11 +837,15 @@ async function LikeAndDislike(req, resp) {
         if (!blog_id) {
             return resp.status(200).json({ 'status': 400, 'message': 'blog id required.' });
         }
+        if (!blog_post_by) {
+            return resp.status(200).json({ 'status': 400, 'message': 'blog post by required.' });
+        }
         let like = {};
         if (status == 1) {
             let data = {
                 user_id: user_id,
                 blog_id: blog_id,
+                blog_post_by: blog_post_by,
                 delete: 0,
                 created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
             };
@@ -926,7 +934,7 @@ async function LikeAndDislike(req, resp) {
 
 async function Comment(req, resp) {
     try {
-        let { user_id = '', blog_id = '', status = 0, comment = '', comment_id = '' } = req.body;
+        let { user_id = '', blog_id = '', status = 0, comment = '', comment_id = '', blog_post_by = '' } = req.body;
 
         if (!user_id) {
             return resp.status(200).json({ 'status': 400, 'message': 'user id required.' });
@@ -937,12 +945,16 @@ async function Comment(req, resp) {
         if (!comment) {
             return resp.status(200).json({ 'status': 400, 'message': 'comment required.' });
         }
+        if (!blog_post_by) {
+            return resp.status(200).json({ 'status': 400, 'message': 'blog post by required.' });
+        }
         let insert_data = {};
         if (status == 1) {
             let data = {
                 user_id: user_id,
                 blog_id: blog_id,
                 comment: comment,
+                blog_post_by: blog_post_by,
                 delete: 0,
                 created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
             };
@@ -1017,6 +1029,7 @@ async function Comment(req, resp) {
             }
             let update = {
                 comment: comment,
+                blog_post_by: blog_post_by,
                 updated_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
             };
             insert_data = await CommentsModel.findByIdAndUpdate(
@@ -1047,6 +1060,7 @@ async function Comment(req, resp) {
             let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
             insert_data = {
                 ...insert_data._doc,
+                "blog_post_by": insert_data._doc.blog_post_by,
                 "user_name": user.name,
                 "user_photo": user.photo,
                 "user_file_view_path": file_dtl.file_view_path,
@@ -1058,7 +1072,8 @@ async function Comment(req, resp) {
             .find({
                 $and: [
                     { blog_id: new mongodb.ObjectId(blog_id) },
-                    { delete: 0 }
+                    { delete: 0 },
+                    { hide_status: 0 },
                 ]
             })
             .countDocuments();
@@ -1067,7 +1082,8 @@ async function Comment(req, resp) {
                 $and: [
                     { blog_id: new mongodb.ObjectId(blog_id) },
                     { user_id: new mongodb.ObjectId(user_id) },
-                    { delete: 0 }
+                    { delete: 0 },
+                    { hide_status: 0 },
                 ]
             })
             .countDocuments();
@@ -1093,7 +1109,8 @@ async function UserComment(req, resp) {
                 $and: [
                     { user_id: new mongodb.ObjectId(user_id) },
                     { blog_id: new mongodb.ObjectId(blog_id) },
-                    { delete: 0 }
+                    { delete: 0 },
+                    { hide_status: 0 },
                 ]
             });
         return resp.status(200).json({ "status": 200, "message": "Success", 'result': result, total: result !== null ? 1 : 0 });
@@ -1118,7 +1135,8 @@ async function CommentList(req, resp) {
                 $match: {
                     $and: [
                         { blog_id: new mongodb.ObjectId(blog_id) },
-                        { delete: 0 }
+                        { delete: 0 },
+                        { hide_status: 0 },
                     ]
                 }
             },
@@ -1144,6 +1162,8 @@ async function CommentList(req, resp) {
                     updated_at: 1,
                     user_name: "$user_detail.name",
                     user_photo: "$user_detail.photo",
+                    blog_post_by: 1,
+                    hide_status: 1,
                 }
             }
         ]);
@@ -1151,7 +1171,8 @@ async function CommentList(req, resp) {
             .find({
                 $and: [
                     { blog_id: new mongodb.ObjectId(blog_id) },
-                    { delete: 0 }
+                    { delete: 0 },
+                    { hide_status: 0 }
                 ]
             }).countDocuments();
         let resetdata_is = await Promise.all(
@@ -1162,9 +1183,11 @@ async function CommentList(req, resp) {
                 let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
                 return {
                     ...element,
+                    "hide_status": element.hide_status,
+                    "blog_post_by": element.blog_post_by,
                     "created_at": moment(element.created_at).format('YYYY-MM-DD HH:mm:ss'),
                     "updated_at": element.updated_at == null ? null : moment(element.updated_at).format('YYYY-MM-DD HH:mm:ss'),
-                    user_file_view_path: file_dtl.file_view_path,
+                    "user_file_view_path": file_dtl.file_view_path,
                 }
             })
         );
@@ -1174,7 +1197,8 @@ async function CommentList(req, resp) {
                 $and: [
                     { blog_id: new mongodb.ObjectId(blog_id) },
                     { user_id: new mongodb.ObjectId(user_id) },
-                    { delete: 0 }
+                    { delete: 0 },
+                    { hide_status: 0 },
                 ]
             })
             .countDocuments();
@@ -1184,4 +1208,52 @@ async function CommentList(req, resp) {
     }
 }
 
-module.exports = { UplodePhoto, CreactBlog, Myblogs, BlogByid, DeleteBlogByid, UpdateBlog, BlogsCategoryList, UplodeThumbnail, BlogByAlias, LikeAndDislike, UserComment, Comment, CommentList };
+async function hideComments(req, resp) {
+    try {
+        let { user_id = '', comment_id = '', blog_id = '' } = req.body;
+
+        if (!user_id) {
+            return resp.status(200).json({ 'status': 400, 'message': 'user id required.' });
+        }
+        if (!blog_id) {
+            return resp.status(200).json({ 'status': 400, 'message': 'blog id required.' });
+        }
+        if (!comment_id) {
+            return resp.status(200).json({ 'status': 400, 'message': 'comment id required.' });
+        }
+
+        let update = {
+            hide_status: 1,
+            updated_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+        };
+        data = await CommentsModel.findByIdAndUpdate(
+            { _id: new mongodb.ObjectId(comment_id) },
+            { $set: update },
+            { new: true, useFindAndModify: false }
+        );
+        let total = await CommentsModel
+            .find({
+                $and: [
+                    { blog_id: new mongodb.ObjectId(blog_id) },
+                    { delete: 0 },
+                    { hide_status: 0 },
+                ]
+            })
+            .countDocuments();
+        let mytotal = await CommentsModel
+            .find({
+                $and: [
+                    { blog_id: new mongodb.ObjectId(blog_id) },
+                    { user_id: new mongodb.ObjectId(user_id) },
+                    { delete: 0 },
+                    { hide_status: 0 },
+                ]
+            })
+            .countDocuments();
+        return resp.status(200).json({ "status": 200, "message": "Success", 'result': data, total: total, mytotal: mytotal });
+    } catch (error) {
+        return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
+    }
+}
+
+module.exports = { UplodePhoto, CreactBlog, Myblogs, BlogByid, DeleteBlogByid, UpdateBlog, BlogsCategoryList, UplodeThumbnail, BlogByAlias, LikeAndDislike, UserComment, Comment, CommentList, hideComments };

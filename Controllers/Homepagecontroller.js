@@ -100,7 +100,8 @@ async function Allblogs(req, resp) {
                                 $expr: {
                                     $and: [
                                         { $eq: ["$blog_id", "$$blogid"] },
-                                        { $eq: ["$delete", 0] }
+                                        { $eq: ["$delete", 0] },
+                                        { $eq: ["$hide_status", 0] },
                                     ]
                                 }
                             }
@@ -125,7 +126,8 @@ async function Allblogs(req, resp) {
                                     $and: [
                                         { $eq: ["$user_id", "$$loggedinuserid"] },
                                         { $eq: ["$blog_id", "$$blogid"] },
-                                        { $eq: ["$delete", 0] }
+                                        { $eq: ["$delete", 0] },
+                                        { $eq: ["$hide_status", 0] },
                                     ]
                                 }
                             }
