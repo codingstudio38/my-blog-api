@@ -204,7 +204,7 @@ async function Allblogs(req, resp) {
                     "is_archive": element.is_archive == undefined ? false : element.is_archive,
                     "like": element.like == undefined ? true : element.like,
                     "share": element.share == undefined ? true : element.share,
-                    "comment": element.commnet == undefined ? true : element.comment,
+                    "comment": element.comment == undefined ? true : element.comment,
                     "created_at": moment(element.created_at).format('YYYY-MM-DD HH:mm:ss'),
                     "updated_at": element.updated_at == null ? null : moment(element.updated_at).format('YYYY-MM-DD HH:mm:ss'),
                     "thumbnail_dtl": thumbnail_dtl,
