@@ -89,7 +89,7 @@ async function UplodeThumbnail(req, resp) {
 
 async function CreactBlog(req, resp) {
     try {
-        let { user_id = '', title = '', content = '', photo = '', sort_description = '', blog_type = '', thumbnail = '' } = req.body;
+        let { user_id = '', title = '', content = '', photo = '', sort_description = '', blog_type = '', thumbnail = '', like = true, share = true, comment = true } = req.body;
         let content_alias = '',
             blog_file_path = `${Healper.storageFolderPath()}user-blogs/temp/user${user_id}/${photo}`,
             new_blog_file_path = `${Healper.storageFolderPath()}user-blogs/${photo}`;
@@ -142,6 +142,9 @@ async function CreactBlog(req, resp) {
             content_alias: content_alias,
             blog_type: blog_type,
             sort_description: sort_description,
+            like: like,
+            share: share,
+            comment: comment,
             created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
         };
         if (blog_type == "691beef0c2cfd41cc117ef71" || blog_type == "691beef0c2cfd41cc117ef6f" || blog_type == "691beef0c2cfd41cc117ef6e") {
@@ -210,7 +213,7 @@ async function CreactBlog(req, resp) {
 async function Myblogs(req, resp) {
     try {
         let { limit = 5, page = 1 } = req.query;
-        let { title = '', user_id = '', blog_type = '' } = req.body;
+        let { title = '', user_id = '', blog_type = '', is_archive = '' } = req.body;
         let skip = 0;
         limit = parseInt(limit);
         page = parseInt(page);
@@ -225,6 +228,9 @@ async function Myblogs(req, resp) {
         }
         if (blog_type !== '') {
             andConditions.push({ blog_type: new mongodb.ObjectId(blog_type) });
+        }
+        if (is_archive !== '') {
+            andConditions.push({ is_archive: is_archive == 1 ? true : false });
         }
         andConditions.push({ delete: 0 });
         let query = andConditions.length > 0 ? { $and: andConditions } : {};
@@ -376,6 +382,12 @@ async function Myblogs(req, resp) {
                     total_comments: 1,
                     mycomment: 1,
                     user_id: 1,
+                    is_shared_blog: 1,
+                    shared_blog_id: 1,
+                    is_archive: 1,
+                    like: 1,
+                    share: 1,
+                    comment: 1,
                 }
             }
         ]);
@@ -403,23 +415,16 @@ async function Myblogs(req, resp) {
 
                 return {
                     ...element,
-                    // "_id": element._id,
-                    // "user_id": element.user_id,
-                    // "title": element.title,
-                    // "content": element.content,
-                    // "photo": element.photo,
-                    // "content_alias": element.content_alias,
-                    // "active_status": element.active_status,
+                    "is_shared_blog": element.is_shared_blog == undefined ? false : element.is_shared_blog,
+                    "shared_blog_id": element.shared_blog_id == undefined ? false : element.shared_blog_id,
+                    "is_archive": element.is_archive == undefined ? false : element.is_archive,
+                    "like": element.like == undefined ? true : element.like,
+                    "share": element.share == undefined ? true : element.share,
+                    "comment": element.commnet == undefined ? true : element.commnet,
                     "file_dtl": file_dtl,
                     "created_at": moment(element.created_at).format('YYYY-MM-DD HH:mm:ss'),
                     "updated_at": element.updated_at == null ? null : moment(element.updated_at).format('YYYY-MM-DD HH:mm:ss'),
-                    // "user_name": element.user_name,
-                    // "user_photo": element.user_photo,
                     "user_file_dtl": user_file_dtl,
-                    // "blog_type": element.blog_type,
-                    // "category_type_name": element.category_type_name,
-                    // "sort_description": element.sort_description,
-                    // "thumbnail": element.thumbnail,
                     "thumbnail_dtl": thumbnail_dtl,
                 }
             })
@@ -638,6 +643,12 @@ async function BlogByAlias(req, resp) {
                     total_comments: 1,
                     mycomment: 1,
                     user_id: 1,
+                    is_shared_blog: 1,
+                    shared_blog_id: 1,
+                    is_archive: 1,
+                    like: 1,
+                    share: 1,
+                    comment: 1,
                 }
             }
         ]);
@@ -659,6 +670,12 @@ async function BlogByAlias(req, resp) {
                 let thumbnail_dtl = await Healper.FileInfo(thumbnail_name, thumbnail_path, thumbnail_view_path);
                 return {
                     ...element,
+                    "is_shared_blog": element.is_shared_blog == undefined ? false : element.is_shared_blog,
+                    "shared_blog_id": element.shared_blog_id == undefined ? false : element.shared_blog_id,
+                    "is_archive": element.is_archive == undefined ? false : element.is_archive,
+                    "like": element.like == undefined ? true : element.like,
+                    "share": element.share == undefined ? true : element.share,
+                    "comment": element.commnet == undefined ? true : element.comment,
                     "created_at": moment(element.created_at).format('YYYY-MM-DD HH:mm:ss'),
                     "updated_at": element.updated_at == null ? null : moment(element.updated_at).format('YYYY-MM-DD HH:mm:ss'),
                     "thumbnail_dtl": thumbnail_dtl,
@@ -692,7 +709,7 @@ async function DeleteBlogByid(req, resp) {
 }
 async function UpdateBlog(req, resp) {
     try {
-        let { id = '', user_id = '', title = '', content = '', photo = '', sort_description = '', blog_type = '', thumbnail = '' } = req.body;
+        let { id = '', user_id = '', title = '', content = '', photo = '', sort_description = '', blog_type = '', thumbnail = '', like = true, share = true, comment = true } = req.body;
         let content_alias = '',
             blog_file_path = `${Healper.storageFolderPath()}user-blogs/temp/user${user_id}/${photo}`,
             new_blog_file_path = `${Healper.storageFolderPath()}user-blogs/${photo}`;
@@ -733,6 +750,9 @@ async function UpdateBlog(req, resp) {
             updated_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
             blog_type: blog_type,
             sort_description: sort_description,
+            like: like,
+            share: share,
+            comment: comment,
         };
 
         let thumbnail_file_path = `${Healper.storageFolderPath()}user-blogs/temp/user-blogs-thumbnail/user${user_id}/${thumbnail}`;
@@ -1256,4 +1276,31 @@ async function hideComments(req, resp) {
     }
 }
 
-module.exports = { UplodePhoto, CreactBlog, Myblogs, BlogByid, DeleteBlogByid, UpdateBlog, BlogsCategoryList, UplodeThumbnail, BlogByAlias, LikeAndDislike, UserComment, Comment, CommentList, hideComments };
+
+async function UpdateBlogArchive(req, resp) {
+    try {
+        let { status = true, blog_id = '' } = req.body;
+
+        if (status == undefined) {
+            return resp.status(200).json({ 'status': 400, 'message': 'status required.' });
+        }
+        if (!blog_id) {
+            return resp.status(200).json({ 'status': 400, 'message': 'blog id required.' });
+        }
+
+        let update = {
+            is_archive: status,
+            updated_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+        };
+        data = await BlogsModel.findByIdAndUpdate(
+            { _id: new mongodb.ObjectId(blog_id) },
+            { $set: update },
+            { new: true, useFindAndModify: false }
+        );
+        return resp.status(200).json({ "status": 200, "message": "Success", 'result': data });
+    } catch (error) {
+        return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
+    }
+}
+
+module.exports = { UplodePhoto, CreactBlog, Myblogs, BlogByid, DeleteBlogByid, UpdateBlog, BlogsCategoryList, UplodeThumbnail, BlogByAlias, LikeAndDislike, UserComment, Comment, CommentList, hideComments, UpdateBlogArchive };

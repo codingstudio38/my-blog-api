@@ -6,7 +6,7 @@ const APP_STORAGE = process.env.APP_STORAGE;
 async function Allblogs(req, resp) {
     try {
         let { limit = 5, page = 1 } = req.query;
-        let { title = '', user_id = '' } = req.body;
+        let { title = '', user_id = '', is_archive = '' } = req.body;
         let skip = 0, totalpage = 0;
         limit = parseInt(limit);
         page = parseInt(page);
@@ -16,7 +16,9 @@ async function Allblogs(req, resp) {
         if (title !== '') {
             andConditions.push({ title: { $regex: new RegExp(title, "i") } });
         }
-
+        if (is_archive !== '') {
+            andConditions.push({ is_archive: is_archive == 1 ? true : false });
+        }
         andConditions.push({ delete: 0 });
         let query = andConditions.length > 0 ? { $and: andConditions } : {};
 
@@ -165,6 +167,12 @@ async function Allblogs(req, resp) {
                     total_comments: 1,
                     mycomment: 1,
                     user_id: 1,
+                    is_shared_blog: 1,
+                    shared_blog_id: 1,
+                    is_archive: 1,
+                    like: 1,
+                    share: 1,
+                    comment: 1,
                 }
             }
         ]);
@@ -191,6 +199,12 @@ async function Allblogs(req, resp) {
 
                 return {
                     ...element,
+                    "is_shared_blog": element.is_shared_blog == undefined ? false : element.is_shared_blog,
+                    "shared_blog_id": element.shared_blog_id == undefined ? false : element.shared_blog_id,
+                    "is_archive": element.is_archive == undefined ? false : element.is_archive,
+                    "like": element.like == undefined ? true : element.like,
+                    "share": element.share == undefined ? true : element.share,
+                    "comment": element.commnet == undefined ? true : element.comment,
                     "created_at": moment(element.created_at).format('YYYY-MM-DD HH:mm:ss'),
                     "updated_at": element.updated_at == null ? null : moment(element.updated_at).format('YYYY-MM-DD HH:mm:ss'),
                     "thumbnail_dtl": thumbnail_dtl,

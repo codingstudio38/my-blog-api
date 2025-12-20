@@ -55,6 +55,7 @@ routeapp.post("/user-blog-comment", Auth, Blogcontroller.UserComment);
 routeapp.post("/blog-comment", Auth, Blogcontroller.Comment);
 routeapp.post("/blog-comment-list", Auth, Blogcontroller.CommentList);
 routeapp.post("/hide-blog-comment", Auth, Blogcontroller.hideComments);
+routeapp.post("/update-blog-archive", Auth, Blogcontroller.UpdateBlogArchive);
 routeapp.all(/.*/, async (req, res) => {
     res.status(404).json({ status: 404, message: "route not found..!!" });
 });
