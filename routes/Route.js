@@ -56,6 +56,9 @@ routeapp.post("/blog-comment", Auth, Blogcontroller.Comment);
 routeapp.post("/blog-comment-list", Auth, Blogcontroller.CommentList);
 routeapp.post("/hide-blog-comment", Auth, Blogcontroller.hideComments);
 routeapp.post("/update-blog-archive", Auth, Blogcontroller.UpdateBlogArchive);
+routeapp.post("/share-blog", Auth, Blogcontroller.ShareBlog);
+routeapp.post("/like-and-dislike-on-sharepost", Auth, Blogcontroller.LikeAndDislikeOnSharePost);
+routeapp.post("/comment-on-sharepost", Auth, Blogcontroller.CommentOnSharePost);
 routeapp.all(/.*/, async (req, res) => {
     res.status(404).json({ status: 404, message: "route not found..!!" });
 });
