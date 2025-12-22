@@ -20,6 +20,7 @@ const APP_STORAGE = process.env.APP_STORAGE;
 const blog_post_status = process.env.blog_post_status;
 const new_comment = process.env.new_comment;
 const new_like = process.env.new_like;
+const new_share = process.env.new_share;
 async function UplodePhoto(req, resp) {
     try {
         let { userid = '' } = req.body;
@@ -243,7 +244,7 @@ async function Myblogs(req, resp) {
             { $match: query },
             {
                 $lookup: {
-                    from: "users", // collection name (not model name)
+                    from: "users",
                     localField: "user_id",
                     foreignField: "_id",
                     as: "user_detail"
@@ -291,10 +292,52 @@ async function Myblogs(req, resp) {
                         {
                             $match: {
                                 $expr: {
+                                    $or: [
+                                        {
+                                            $and: [
+                                                { $eq: ["$user_id", "$$loggedinuserid"] },
+                                                { $eq: ["$blog_id", "$$blogid"] },
+                                                { $eq: ["$delete", 0] },
+                                                { $eq: ["$link_shared_blog_id", ""] },
+                                                { $eq: ["$shared_blog_id", ""] },
+                                                { $eq: ["$shared_blog_like_id", ""] },
+                                            ]
+                                        },
+                                        {
+                                            $and: [
+                                                { $eq: ["$user_id", "$$loggedinuserid"] },
+                                                { $eq: ["$blog_id", "$$blogid"] },
+                                                { $eq: ["$delete", 0] },
+                                                { $eq: [{ $type: "$link_shared_blog_id" }, "missing"] },
+                                                { $eq: [{ $type: "$shared_blog_id" }, "missing"] },
+                                                { $eq: [{ $type: "$shared_blog_like_id" }, "missing"] },
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "my_total_notsharelikes"
+                }
+            },
+            {
+                $addFields: {
+                    my_total_notsharelike: { $size: "$my_total_notsharelikes" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "likes",
+                    let: { blogid: "$_id", loggedinuserid: new mongodb.ObjectId(user_id) },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
                                     $and: [
                                         { $eq: ["$user_id", "$$loggedinuserid"] },
                                         { $eq: ["$blog_id", "$$blogid"] },
-                                        { $eq: ["$delete", 0] }
+                                        { $eq: ["$delete", 0] },
                                     ]
                                 }
                             }
@@ -359,6 +402,155 @@ async function Myblogs(req, resp) {
                     mycomment: { $size: "$my_comment" }
                 }
             },
+            {
+                $lookup: {
+                    from: "comments",
+                    let: { blogid: "$_id", loggedinuserid: new mongodb.ObjectId(user_id) },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $or: [
+                                        {
+                                            $and: [
+                                                { $eq: ["$user_id", "$$loggedinuserid"] },
+                                                { $eq: ["$blog_id", "$$blogid"] },
+                                                { $eq: ["$delete", 0] },
+                                                { $eq: ["$hide_status", 0] },
+                                                { $eq: ["$link_shared_blog_id", ""] },
+                                                { $eq: ["$shared_blog_id", ""] },
+                                                { $eq: ["$shared_blog_comment_id", ""] },
+                                            ]
+                                        },
+                                        {
+                                            $and: [
+                                                { $eq: ["$user_id", "$$loggedinuserid"] },
+                                                { $eq: ["$blog_id", "$$blogid"] },
+                                                { $eq: ["$delete", 0] },
+                                                { $eq: ["$hide_status", 0] },
+                                                { $eq: [{ $type: "$link_shared_blog_id" }, "missing"] },
+                                                { $eq: [{ $type: "$shared_blog_id" }, "missing"] },
+                                                { $eq: [{ $type: "$shared_blog_comment_id" }, "missing"] },
+                                            ]
+                                        },
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "my_total_notsharecomments"
+                }
+            },
+            {
+                $addFields: {
+                    my_total_notsharecomment: { $size: "$my_total_notsharecomments" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "shares",
+                    let: { blogid: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$blog_id", "$$blogid"] },
+                                        { $eq: ["$delete", 0] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "total_share"
+                }
+            },
+            {
+                $addFields: {
+                    total_shares: { $size: "$total_share" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "shares",
+                    let: { blogid: "$_id", loggedinuserid: new mongodb.ObjectId(user_id) },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$user_id", "$$loggedinuserid"] },
+                                        { $eq: ["$blog_id", "$$blogid"] },
+                                        { $eq: ["$delete", 0] },
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "my_share"
+                }
+            },
+            {
+                $addFields: {
+                    my_shares: { $size: "$my_share" }
+                }
+            },
+            {
+                $addFields: {
+                    main_blog_user_id_obj: {
+                        $cond: {
+                            if: {
+                                $or: [
+                                    { $eq: ["$main_blog_user_id", ""] },
+                                    { $eq: ["$main_blog_user_id", null] },
+                                    { $not: ["$main_blog_user_id"] }
+                                ]
+                            },
+                            then: '',
+                            else: {
+                                $toObjectId: "$main_blog_user_id"
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "main_blog_user_id_obj",
+                    foreignField: "_id",
+                    as: "share_user_detail"
+                }
+            },
+            { $unwind: { path: "$share_user_detail", preserveNullAndEmptyArrays: true } },
+            {
+                $addFields: {
+                    shared_blog_id_obj: {
+                        $cond: {
+                            if: {
+                                $or: [
+                                    { $eq: ["$shared_blog_id", ""] },
+                                    { $eq: ["$shared_blog_id", null] },
+                                    { $not: ["$shared_blog_id"] }
+                                ]
+                            },
+                            then: '',
+                            else: {
+                                $toObjectId: "$shared_blog_id"
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: "blogs",
+                    localField: "shared_blog_id_obj",
+                    foreignField: "_id",
+                    as: "share_blog_detail"
+                }
+            },
+            { $unwind: { path: "$share_blog_detail", preserveNullAndEmptyArrays: true } },
             { $sort: { _id: -1 } },
             { $skip: skip },
             { $limit: limit },
@@ -390,6 +582,20 @@ async function Myblogs(req, resp) {
                     share: 1,
                     comment: 1,
                     main_blog_user_id: 1,
+                    total_shares: 1,
+                    my_shares: 1,
+                    share_user_name: "$share_user_detail.name",
+                    share_user_photo: "$share_user_detail.photo",
+                    share_category_type: "$share_blog_detail.blog_type",
+                    share_title: "$share_blog_detail.title",
+                    share_sort_description: "$share_blog_detail.sort_description",
+                    share_content: "$share_blog_detail.content",
+                    share_photo: "$share_blog_detail.photo",
+                    share_thumbnail: "$share_blog_detail.thumbnail",
+                    share_content_alias: "$share_blog_detail.content_alias",
+                    share_created_at: "$share_blog_detail.created_at",
+                    my_total_notsharelike: 1,
+                    my_total_notsharecomment: 1,
 
                 }
             }
@@ -415,9 +621,36 @@ async function Myblogs(req, resp) {
                 let thumbnail_view_path = `${APP_STORAGE}user-blogs/thumbnail/${thumbnail_name}`;
                 let thumbnail_dtl = await Healper.FileInfo(thumbnail_name, thumbnail_path, thumbnail_view_path);
 
+                let file_name1 = `${element.share_photo}`;
+                let file_path1 = `${Healper.storageFolderPath()}user-blogs/${file_name1}`;
+                let file_view_path1 = `${APP_STORAGE}user-blogs/${file_name1}`;
+                let file_dtl1 = await Healper.FileInfo(file_name1, file_path1, file_view_path1);
+
+                let user_file_name1 = `${element.share_user_photo}`;
+                let user_file_path1 = `${Healper.storageFolderPath()}users/${user_file_name1}`;
+                let user_file_view_path1 = `${APP_STORAGE}users/${user_file_name1}`;
+                let user_file_dtl1 = await Healper.FileInfo(user_file_name1, user_file_path1, user_file_view_path1);
+
+                let thumbnail_name1 = `${element.share_thumbnail}`;
+                let thumbnail_path1 = `${Healper.storageFolderPath()}user-blogs/thumbnail/${thumbnail_name1}`;
+                let thumbnail_view_path1 = `${APP_STORAGE}user-blogs/thumbnail/${thumbnail_name1}`;
+                let thumbnail_dtl1 = await Healper.FileInfo(thumbnail_name1, thumbnail_path1, thumbnail_view_path1);
 
                 return {
                     ...element,
+                    "my_total_notsharecomment": element.my_total_notsharecomment == undefined ? 0 : element.my_total_notsharecomment,
+                    "my_total_notsharelike": element.my_total_notsharelike == undefined ? 0 : element.my_total_notsharelike,
+                    "share_created_at": element.share_created_at == undefined ? '' : moment(element.share_created_at).format('YYYY-MM-DD HH:mm:ss'),
+                    "share_user_name": element.share_user_name == undefined ? '' : element.share_user_name,
+                    "share_user_photo": element.share_user_photo == undefined ? '' : element.share_user_photo,
+                    "share_category_type": element.share_category_type == undefined ? '' : element.share_category_type,
+                    "share_title": element.share_title == undefined ? '' : element.share_title,
+                    "share_sort_description": element.share_sort_description == undefined ? '' : element.share_sort_description,
+                    "share_content": element.share_content == undefined ? '' : element.share_content,
+                    "share_photo": element.share_photo == undefined ? '' : element.share_photo,
+                    "share_thumbnail": element.share_thumbnail == undefined ? '' : element.share_thumbnail,
+                    "share_content_alias": element.share_content_alias == undefined ? '' : element.share_content_alias,
+
                     "main_blog_user_id": element.main_blog_user_id == undefined ? '' : element.main_blog_user_id,
                     "is_shared_blog": element.is_shared_blog == undefined ? false : element.is_shared_blog,
                     "shared_blog_id": element.shared_blog_id == undefined ? '' : element.shared_blog_id,
@@ -425,11 +658,15 @@ async function Myblogs(req, resp) {
                     "like": element.like == undefined ? true : element.like,
                     "share": element.share == undefined ? true : element.share,
                     "comment": element.comment == undefined ? true : element.comment,
-                    "file_dtl": file_dtl,
                     "created_at": moment(element.created_at).format('YYYY-MM-DD HH:mm:ss'),
                     "updated_at": element.updated_at == null ? null : moment(element.updated_at).format('YYYY-MM-DD HH:mm:ss'),
                     "user_file_dtl": user_file_dtl,
                     "thumbnail_dtl": thumbnail_dtl,
+                    "file_dtl": file_dtl,
+
+                    "share_thumbnail_dtl": thumbnail_dtl1,
+                    "share_user_file_dtl": user_file_dtl1,
+                    "share_file_dtl": file_dtl1,
                 }
             })
         );
@@ -561,6 +798,48 @@ async function BlogByAlias(req, resp) {
                         {
                             $match: {
                                 $expr: {
+                                    $or: [
+                                        {
+                                            $and: [
+                                                { $eq: ["$user_id", "$$loggedinuserid"] },
+                                                { $eq: ["$blog_id", "$$blogid"] },
+                                                { $eq: ["$delete", 0] },
+                                                { $eq: ["$link_shared_blog_id", ""] },
+                                                { $eq: ["$shared_blog_id", ""] },
+                                                { $eq: ["$shared_blog_like_id", ""] },
+                                            ]
+                                        },
+                                        {
+                                            $and: [
+                                                { $eq: ["$user_id", "$$loggedinuserid"] },
+                                                { $eq: ["$blog_id", "$$blogid"] },
+                                                { $eq: ["$delete", 0] },
+                                                { $eq: [{ $type: "$link_shared_blog_id" }, "missing"] },
+                                                { $eq: [{ $type: "$shared_blog_id" }, "missing"] },
+                                                { $eq: [{ $type: "$shared_blog_like_id" }, "missing"] },
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "my_total_notsharelikes"
+                }
+            },
+            {
+                $addFields: {
+                    my_total_notsharelike: { $size: "$my_total_notsharelikes" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "likes",
+                    let: { blogid: "$_id", loggedinuserid: new mongodb.ObjectId(user_id) },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
                                     $and: [
                                         { $eq: ["$user_id", "$$loggedinuserid"] },
                                         { $eq: ["$blog_id", "$$blogid"] },
@@ -629,7 +908,156 @@ async function BlogByAlias(req, resp) {
                     mycomment: { $size: "$my_comment" }
                 }
             },
-            { $sort: { _id: -1 } },
+            {
+                $lookup: {
+                    from: "comments",
+                    let: { blogid: "$_id", loggedinuserid: new mongodb.ObjectId(user_id) },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $or: [
+                                        {
+                                            $and: [
+                                                { $eq: ["$user_id", "$$loggedinuserid"] },
+                                                { $eq: ["$blog_id", "$$blogid"] },
+                                                { $eq: ["$delete", 0] },
+                                                { $eq: ["$hide_status", 0] },
+                                                { $eq: ["$link_shared_blog_id", ""] },
+                                                { $eq: ["$shared_blog_id", ""] },
+                                                { $eq: ["$shared_blog_comment_id", ""] },
+                                            ]
+                                        },
+                                        {
+                                            $and: [
+                                                { $eq: ["$user_id", "$$loggedinuserid"] },
+                                                { $eq: ["$blog_id", "$$blogid"] },
+                                                { $eq: ["$delete", 0] },
+                                                { $eq: ["$hide_status", 0] },
+                                                { $eq: [{ $type: "$link_shared_blog_id" }, "missing"] },
+                                                { $eq: [{ $type: "$shared_blog_id" }, "missing"] },
+                                                { $eq: [{ $type: "$shared_blog_comment_id" }, "missing"] },
+                                            ]
+                                        },
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "my_total_notsharecomments"
+                }
+            },
+            {
+                $addFields: {
+                    my_total_notsharecomment: { $size: "$my_total_notsharecomments" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "shares",
+                    let: { blogid: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$blog_id", "$$blogid"] },
+                                        { $eq: ["$delete", 0] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "total_share"
+                }
+            },
+            {
+                $addFields: {
+                    total_shares: { $size: "$total_share" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "shares",
+                    let: { blogid: "$_id", loggedinuserid: new mongodb.ObjectId(user_id) },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$user_id", "$$loggedinuserid"] },
+                                        { $eq: ["$blog_id", "$$blogid"] },
+                                        { $eq: ["$delete", 0] },
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "my_share"
+                }
+            },
+            {
+                $addFields: {
+                    my_shares: { $size: "$my_share" }
+                }
+            },
+            {
+                $addFields: {
+                    main_blog_user_id_obj: {
+                        $cond: {
+                            if: {
+                                $or: [
+                                    { $eq: ["$main_blog_user_id", ""] },
+                                    { $eq: ["$main_blog_user_id", null] },
+                                    { $not: ["$main_blog_user_id"] }
+                                ]
+                            },
+                            then: '',
+                            else: {
+                                $toObjectId: "$main_blog_user_id"
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "main_blog_user_id_obj",
+                    foreignField: "_id",
+                    as: "share_user_detail"
+                }
+            },
+            { $unwind: { path: "$share_user_detail", preserveNullAndEmptyArrays: true } },
+            {
+                $addFields: {
+                    shared_blog_id_obj: {
+                        $cond: {
+                            if: {
+                                $or: [
+                                    { $eq: ["$shared_blog_id", ""] },
+                                    { $eq: ["$shared_blog_id", null] },
+                                    { $not: ["$shared_blog_id"] }
+                                ]
+                            },
+                            then: '',
+                            else: {
+                                $toObjectId: "$shared_blog_id"
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: "blogs",
+                    localField: "shared_blog_id_obj",
+                    foreignField: "_id",
+                    as: "share_blog_detail"
+                }
+            },
+            { $unwind: { path: "$share_blog_detail", preserveNullAndEmptyArrays: true } },
+
             {
                 $project: {
                     _id: 1,
@@ -658,6 +1086,21 @@ async function BlogByAlias(req, resp) {
                     share: 1,
                     comment: 1,
                     main_blog_user_id: 1,
+                    total_shares: 1,
+                    my_shares: 1,
+                    share_user_name: "$share_user_detail.name",
+                    share_user_photo: "$share_user_detail.photo",
+                    share_category_type: "$share_blog_detail.blog_type",
+                    share_title: "$share_blog_detail.title",
+                    share_sort_description: "$share_blog_detail.sort_description",
+                    share_content: "$share_blog_detail.content",
+                    share_photo: "$share_blog_detail.photo",
+                    share_thumbnail: "$share_blog_detail.thumbnail",
+                    share_content_alias: "$share_blog_detail.content_alias",
+                    share_created_at: "$share_blog_detail.created_at",
+                    my_total_notsharelike: 1,
+                    my_total_notsharecomment: 1,
+
                 }
             }
         ]);
@@ -677,8 +1120,37 @@ async function BlogByAlias(req, resp) {
                 let thumbnail_path = `${Healper.storageFolderPath()}user-blogs/thumbnail/${thumbnail_name}`;
                 let thumbnail_view_path = `${APP_STORAGE}user-blogs/thumbnail/${thumbnail_name}`;
                 let thumbnail_dtl = await Healper.FileInfo(thumbnail_name, thumbnail_path, thumbnail_view_path);
+
+                let file_name1 = `${element.share_photo}`;
+                let file_path1 = `${Healper.storageFolderPath()}user-blogs/${file_name1}`;
+                let file_view_path1 = `${APP_STORAGE}user-blogs/${file_name1}`;
+                let file_dtl1 = await Healper.FileInfo(file_name1, file_path1, file_view_path1);
+
+                let user_file_name1 = `${element.share_user_photo}`;
+                let user_file_path1 = `${Healper.storageFolderPath()}users/${user_file_name1}`;
+                let user_file_view_path1 = `${APP_STORAGE}users/${user_file_name1}`;
+                let user_file_dtl1 = await Healper.FileInfo(user_file_name1, user_file_path1, user_file_view_path1);
+
+                let thumbnail_name1 = `${element.share_thumbnail}`;
+                let thumbnail_path1 = `${Healper.storageFolderPath()}user-blogs/thumbnail/${thumbnail_name1}`;
+                let thumbnail_view_path1 = `${APP_STORAGE}user-blogs/thumbnail/${thumbnail_name1}`;
+                let thumbnail_dtl1 = await Healper.FileInfo(thumbnail_name1, thumbnail_path1, thumbnail_view_path1);
+
                 return {
                     ...element,
+                    "my_total_notsharecomment": element.my_total_notsharecomment == undefined ? 0 : element.my_total_notsharecomment,
+                    "my_total_notsharelike": element.my_total_notsharelike == undefined ? 0 : element.my_total_notsharelike,
+                    "share_created_at": element.share_created_at == undefined ? '' : moment(element.share_created_at).format('YYYY-MM-DD HH:mm:ss'),
+                    "share_user_name": element.share_user_name == undefined ? '' : element.share_user_name,
+                    "share_user_photo": element.share_user_photo == undefined ? '' : element.share_user_photo,
+                    "share_category_type": element.share_category_type == undefined ? '' : element.share_category_type,
+                    "share_title": element.share_title == undefined ? '' : element.share_title,
+                    "share_sort_description": element.share_sort_description == undefined ? '' : element.share_sort_description,
+                    "share_content": element.share_content == undefined ? '' : element.share_content,
+                    "share_photo": element.share_photo == undefined ? '' : element.share_photo,
+                    "share_thumbnail": element.share_thumbnail == undefined ? '' : element.share_thumbnail,
+                    "share_content_alias": element.share_content_alias == undefined ? '' : element.share_content_alias,
+
                     "main_blog_user_id": element.main_blog_user_id == undefined ? '' : element.main_blog_user_id,
                     "is_shared_blog": element.is_shared_blog == undefined ? false : element.is_shared_blog,
                     "shared_blog_id": element.shared_blog_id == undefined ? '' : element.shared_blog_id,
@@ -691,6 +1163,10 @@ async function BlogByAlias(req, resp) {
                     "thumbnail_dtl": thumbnail_dtl,
                     "user_file_dtl": user_file_dtl,
                     "file_dtl": file_dtl,
+
+                    "share_thumbnail_dtl": thumbnail_dtl1,
+                    "share_user_file_dtl": user_file_dtl1,
+                    "share_file_dtl": file_dtl1,
                 }
             })
         )
@@ -900,9 +1376,12 @@ async function LikeAndDislike(req, resp) {
                                 { blog_id: new mongodb.ObjectId(blog_id) },
                                 { user_id: new mongodb.ObjectId(user_id) },
                                 { delete: 0 },
-                                { $eq: [{ $type: "$link_shared_blog_id" }, "missing"] },
-                                { $eq: [{ $type: "$shared_blog_id" }, "missing"] },
-                                { $eq: [{ $type: "$shared_blog_like_id" }, "missing"] },
+                                { link_shared_blog_id: { $exists: false } },
+                                { shared_blog_id: { $exists: false } },
+                                { shared_blog_like_id: { $exists: false } }
+                                // { $eq: [{ $type: "$link_shared_blog_id" }, "missing"] },
+                                // { $eq: [{ $type: "$shared_blog_id" }, "missing"] },
+                                // { $eq: [{ $type: "$shared_blog_like_id" }, "missing"] },
                             ]
                         },
                     ]
@@ -1018,7 +1497,7 @@ async function LikeAndDislike(req, resp) {
 
         //     })
         //     .countDocuments();
-        return resp.status(200).json({ "status": 200, "message": "Success", 'result': like, total: total});
+        return resp.status(200).json({ "status": 200, "message": "Success", 'result': like, total: total });
     } catch (error) {
         return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
     }
@@ -2036,39 +2515,128 @@ async function ShareBlog(req, resp) {
         if (!blog_id) {
             return resp.status(200).json({ 'status': 400, 'message': 'blog id required.' });
         }
+        let data = {}, Blog = {}, share = {};
+        let blog = new BlogsModel();
+        blog = await blog.findByBlogId(blog_id);
 
-        let main_blog = new BlogsModel();
-        main_blog = await main_blog.findByBlogId(blog_id);
 
-        let data = {
-            user_id: user_id,
-            title: main_blog.title,
-            content: main_blog.content,
-            photo: main_blog.photo,
-            content_alias: main_blog.content_alias,
-            blog_type: main_blog.blog_type,
-            sort_description: main_blog.sort_description,
-            like: main_blog.like == undefined ? true : main_blog.like,
-            share: main_blog.share == undefined ? true : main_blog.share,
-            comment: main_blog.comment == undefined ? true : main_blog.comment,
-            thumbnail: main_blog.thumbnail,
-            is_shared_blog: true,
-            shared_blog_id: main_blog._id,
-            main_blog_user_id: main_blog.user_id,
-            is_archive: false,
-            active_status: 1,
-            created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
-        };
-        let Blog = new BlogsModel(data);
-        Blog = await Blog.save();
+        if (blog.is_shared_blog == true) {
+            let main_blog = new BlogsModel();
+            main_blog = await main_blog.findByBlogId(blog.shared_blog_id);
+            data = {
+                user_id: user_id,
+                title: main_blog.title,
+                content: main_blog.content,
+                photo: main_blog.photo,
+                content_alias: `${main_blog.content_alias}-${Healper.generateRandomString(6)}`,
+                blog_type: main_blog.blog_type,
+                sort_description: main_blog.sort_description,
+                like: true,
+                share: true,
+                comment: true,
+                thumbnail: main_blog.thumbnail,
+                is_shared_blog: true,
+                shared_blog_id: main_blog._id,
+                main_blog_user_id: main_blog.user_id,
+                is_archive: false,
+                active_status: 1,
+                created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+            };
+            Blog = new BlogsModel(data);
+            Blog = await Blog.save();
 
-        let share = new SharesModel({
-            user_id: user_id,
-            blog_id: main_blog._id,
-            blog_post_by: main_blog.user_id,
-            created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
-        });
-        share = await share.save();
+            share = new SharesModel({
+                user_id: user_id,
+                blog_id: main_blog._id,
+                blog_post_by: main_blog.user_id,
+                created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+            });
+            share = await share.save();
+        } else {
+            data = {
+                user_id: user_id,
+                title: blog.title,
+                content: blog.content,
+                photo: blog.photo,
+                content_alias: `${blog.content_alias}-${Healper.generateRandomString(6)}`,
+                blog_type: blog.blog_type,
+                sort_description: blog.sort_description,
+                like: true,
+                share: true,
+                comment: true,
+                thumbnail: blog.thumbnail,
+                is_shared_blog: true,
+                shared_blog_id: blog._id,
+                main_blog_user_id: blog.user_id,
+                is_archive: false,
+                active_status: 1,
+                created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+            };
+            Blog = new BlogsModel(data);
+            Blog = await Blog.save();
+
+            share = new SharesModel({
+                user_id: user_id,
+                blog_id: blog._id,
+                blog_post_by: blog.user_id,
+                created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+            });
+            share = await share.save();
+        }
+
+        let obj = {}, notify_toid = '';
+        //////////////////// notify to share blog post by //////////// 
+        if (blog !== null) {
+            notify_toid = blog.is_shared_blog == true ? blog.user_id : data.main_blog_user_id;
+            let from = new UsersModel();
+            from = await from.findByUserId(user_id);
+
+            let to = new UsersModel();
+            to = await to.findByUserId(notify_toid);
+
+            let UsersFriend = new UsersFriendModel();
+            UsersFriend = await UsersFriend.MyFriend(user_id, notify_toid);
+
+            obj = {
+                notify_toid: notify_toid,
+                userid: user_id,
+                requestid: UsersFriend.length > 0 ? UsersFriend[0].requestid : notify_toid,
+                from: user_id,
+                to: notify_toid,
+                accept_status: 0,
+                from_user_name: from.name,
+                from_user_photo: from.photo,
+                to_user_name: to.name,
+                to_user_photo: to.photo,
+                category: new_share,
+                remove_byid: data.content_alias,
+                blog_id: data._id,
+                text: data.title,
+                comment: '',
+                read_status: 0,
+                created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+            }
+            let notification = new AllNotificationsModel(obj);
+            notification = await notification.save();
+            let file_name = from.photo;
+            let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+            let file_view_path = `${APP_STORAGE}users/${file_name}`;
+            let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+
+            let to_file_name = to.photo;
+            let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
+            let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
+            let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
+            let reset_notification = {
+                ...notification._doc,
+                to_user_file_view_path: to_file_dtl.file_view_path,
+                from_user_file_view_path: file_dtl.file_view_path,
+                created_at: moment(notification.created_at).format('YYYY-MM-DD HH:mm:ss'),
+            };
+            if (clients[notify_toid]) {
+                clients[notify_toid].sendUTF(JSON.stringify({ "code": new_share, "message": "new share", 'result': reset_notification }));
+            }
+        }
 
         let total_shares = await SharesModel
             .find({
