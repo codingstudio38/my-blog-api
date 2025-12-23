@@ -1353,6 +1353,7 @@ async function LikeAndDislike(req, resp) {
                 blog_id: blog_id,
                 blog_post_by: blog_post_by,
                 link_shared_blog_id: '',
+                shared_by_id: '',
                 shared_blog_id: '',
                 shared_blog_like_id: '',
                 delete: 0,
@@ -1526,6 +1527,7 @@ async function Comment(req, resp) {
                 blog_id: blog_id,
                 comment: comment,
                 blog_post_by: blog_post_by,
+                "shared_by_id": '',
                 "shared_blog_id": '',
                 "shared_blog_comment_id": '',
                 "link_shared_blog_id": '',
@@ -1634,6 +1636,7 @@ async function Comment(req, resp) {
             let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
             insert_data = {
                 ...insert_data._doc,
+                "shared_by_id": insert_data._doc.shared_by_id,
                 "shared_blog_id": insert_data._doc.shared_blog_id,
                 "shared_blog_comment_id": insert_data._doc.shared_blog_comment_id,
                 "link_shared_blog_id": insert_data._doc.link_shared_blog_id,
@@ -1798,6 +1801,35 @@ async function CommentList(req, resp) {
                 }
             },
             { $unwind: { path: "$user_detail", preserveNullAndEmptyArrays: true } },
+            {
+                $addFields: {
+                    shared_by_id_obj: {
+                        $cond: {
+                            if: {
+                                $or: [
+                                    { $eq: ["$shared_by_id", ""] },
+                                    { $eq: ["$shared_by_id", null] },
+                                    { $not: ["$shared_by_id"] },
+                                    { $eq: [{ $type: "$shared_by_id" }, "missing"] }
+                                ]
+                            },
+                            then: '',
+                            else: {
+                                $toObjectId: "$shared_by_id"
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "shared_by_id_obj",
+                    foreignField: "_id",
+                    as: "shared_user_detail"
+                }
+            },
+            { $unwind: { path: "$shared_user_detail", preserveNullAndEmptyArrays: true } },
             { $sort: { _id: -1 } },
             { $skip: skip },
             { $limit: limit },
@@ -1815,6 +1847,10 @@ async function CommentList(req, resp) {
                     hide_status: 1,
                     shared_blog_id: 1,
                     shared_blog_comment_id: 1,
+                    shared_by_id:1,
+                    shared_user_name: "$shared_user_detail.name",
+                    shared_user_photo: "$shared_user_detail.photo",
+                    link_shared_blog_id:1,
                 }
             }
         ]);
@@ -1832,8 +1868,18 @@ async function CommentList(req, resp) {
                 let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
                 let file_view_path = `${APP_STORAGE}users/${file_name}`;
                 let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+
+                let file_name1 = element.shared_user_photo;
+                let file_path1 = `${Healper.storageFolderPath()}users/${file_name1}`;
+                let file_view_path1 = `${APP_STORAGE}users/${file_name1}`;
+                let file_dtl1 = await Healper.FileInfo(file_name1, file_path1, file_view_path1);
+
                 return {
                     ...element,
+                    "link_shared_blog_id": element.link_shared_blog_id==undefined ? '' :element.link_shared_blog_id,
+                    "shared_by_id": element.shared_by_id==undefined ? '' :element.shared_by_id,
+                    "shared_user_name": element.shared_user_name==undefined ? '' :element.shared_user_name,
+                    "shared_user_photo": element.shared_user_photo==undefined ? '' :element.shared_user_photo,
                     "hide_status": element.hide_status,
                     "blog_post_by": element.blog_post_by,
                     "shared_blog_id": element.shared_blog_id,
@@ -1841,6 +1887,7 @@ async function CommentList(req, resp) {
                     "created_at": moment(element.created_at).format('YYYY-MM-DD HH:mm:ss'),
                     "updated_at": element.updated_at == null ? null : moment(element.updated_at).format('YYYY-MM-DD HH:mm:ss'),
                     "user_file_view_path": file_dtl.file_view_path,
+                    "shared_user_file_view_path": file_dtl1.file_view_path,
                 }
             })
         );
@@ -2024,6 +2071,7 @@ async function CommentOnSharePost(req, resp) {
                 comment: comment,
                 blog_post_by: blog.user_id,
                 link_shared_blog_id: main_blog._id,
+                shared_by_id: '',
                 shared_blog_id: '',
                 shared_blog_comment_id: '',
                 delete: 0,
@@ -2038,6 +2086,7 @@ async function CommentOnSharePost(req, resp) {
                 comment: comment,
                 blog_post_by: main_blog.user_id,
                 link_shared_blog_id: '',
+                shared_by_id: blog.user_id,
                 shared_blog_id: blog_id,
                 shared_blog_comment_id: insert_data._id,
                 delete: 0,
@@ -2208,6 +2257,7 @@ async function CommentOnSharePost(req, resp) {
             let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
             insert_data = {
                 ...insert_data._doc,
+                "shared_by_id": insert_data._doc.shared_by_id,
                 "blog_post_by": insert_data._doc.blog_post_by,
                 "shared_blog_id": insert_data._doc.shared_blog_id,
                 "shared_blog_comment_id": insert_data._doc.shared_blog_comment_id,
@@ -2293,6 +2343,7 @@ async function LikeAndDislikeOnSharePost(req, resp) {
                 blog_id: blog_id,
                 blog_post_by: blog.user_id,
                 link_shared_blog_id: main_blog._id,
+                shared_by_id:'',
                 shared_blog_id: '',
                 shared_blog_like_id: '',
                 delete: 0,
@@ -2333,6 +2384,7 @@ async function LikeAndDislikeOnSharePost(req, resp) {
                 blog_id: main_blog._id,
                 blog_post_by: main_blog.user_id,
                 link_shared_blog_id: '',
+                shared_by_id: blog.user_id,
                 shared_blog_id: blog_id,
                 shared_blog_like_id: like._id,
                 delete: 0,
@@ -2661,4 +2713,32 @@ async function ShareBlog(req, resp) {
     }
 }
 
-module.exports = { UplodePhoto, CreactBlog, Myblogs, BlogByid, DeleteBlogByid, UpdateBlog, BlogsCategoryList, UplodeThumbnail, BlogByAlias, LikeAndDislike, UserComment, Comment, CommentList, hideComments, UpdateBlogArchive, CommentOnSharePost, LikeAndDislikeOnSharePost, ShareBlog };
+
+
+async function UpdateBlogSetting(req, resp) {
+    try {
+        
+        let { id="", like=true, share=true, comment=true} = req.body;
+
+        if (!id) {
+            return resp.status(200).json({ 'status': 400, 'message': 'blog id required.' });
+        }
+
+        let update = {
+            like: like,
+            share: share,
+            comment: comment,
+            updated_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+        };
+        data = await BlogsModel.findByIdAndUpdate(
+            { _id: new mongodb.ObjectId(id) },
+            { $set: update },
+            { new: true, useFindAndModify: false }
+        );
+        return resp.status(200).json({ "status": 200, "message": "Success", 'result': data });
+    } catch (error) {
+        return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
+    }
+}
+
+module.exports = { UplodePhoto, CreactBlog, Myblogs, BlogByid, DeleteBlogByid, UpdateBlog, BlogsCategoryList, UplodeThumbnail, BlogByAlias, LikeAndDislike, UserComment, Comment, CommentList, hideComments, UpdateBlogArchive, CommentOnSharePost, LikeAndDislikeOnSharePost, ShareBlog, UpdateBlogSetting };

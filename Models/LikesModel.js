@@ -6,6 +6,7 @@ const BlogSchema = new mongooseConnect.Schema({
     blog_id: { type: 'ObjectId', required: true, trim: true, },
     blog_post_by: { type: 'ObjectId', required: true, trim: true, },
     link_shared_blog_id: { type: String, required: false, trim: true, },
+    shared_by_id: { type: 'String', required: false, trim: true, },
     shared_blog_id: { type: String, required: false, trim: true, },
     shared_blog_like_id: { type: String, required: false, trim: true, },
     delete: { type: Number, required: false, default: 0 },
