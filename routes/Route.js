@@ -60,6 +60,7 @@ routeapp.post("/share-blog", Auth, Blogcontroller.ShareBlog);
 routeapp.post("/like-and-dislike-on-sharepost", Auth, Blogcontroller.LikeAndDislikeOnSharePost);
 routeapp.post("/comment-on-sharepost", Auth, Blogcontroller.CommentOnSharePost);
 routeapp.post("/update-blog-settings", Auth, Blogcontroller.UpdateBlogSetting);
+routeapp.post("/blog-share-list", Auth, Blogcontroller.ShareList);
 routeapp.all(/.*/, async (req, res) => {
     res.status(404).json({ status: 404, message: "route not found..!!" });
 });

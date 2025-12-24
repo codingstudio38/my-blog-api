@@ -746,6 +746,7 @@ async function BlogByAlias(req, resp) {
         if (!id) {
             return resp.status(200).json({ "status": 500, "message": 'id required', 'result': {} });
         }
+        id = atob(id);
         let list = await BlogsModel.aggregate([
             { $match: { $and: [{ content_alias: id }, { delete: 0 }] } },
             {
@@ -1748,36 +1749,6 @@ async function CommentList(req, resp) {
                 ]
             });
         }
-        // if (shared_blog_id !== '') {
-        //     if (blog_id !== '') {
-        //         andConditions.push({
-        //             $and: [
-        //                 { blog_id: new mongodb.ObjectId(blog_id) },
-        //                 { delete: 0 },
-        //                 { hide_status: 0 },
-        //             ]
-        //         });
-        //     }
-        // } else {
-        //     andConditions.push({
-        //         $or: [
-        //             {
-        //                 $and: [
-        //                     { link_shared_blog_id: blog_id },
-        //                     { delete: 0 },
-        //                     { hide_status: 0 },
-        //                 ]
-        //             },
-        //             {
-        //                 $and: [
-        //                     { blog_id: new mongodb.ObjectId(blog_id) },
-        //                     { delete: 0 },
-        //                     { hide_status: 0 },
-        //                 ]
-        //             }
-        //         ]
-        //     });
-        // }
 
         let query = andConditions.length > 0 ? { andConditions } : {};
 
@@ -2741,4 +2712,90 @@ async function UpdateBlogSetting(req, resp) {
     }
 }
 
-module.exports = { UplodePhoto, CreactBlog, Myblogs, BlogByid, DeleteBlogByid, UpdateBlog, BlogsCategoryList, UplodeThumbnail, BlogByAlias, LikeAndDislike, UserComment, Comment, CommentList, hideComments, UpdateBlogArchive, CommentOnSharePost, LikeAndDislikeOnSharePost, ShareBlog, UpdateBlogSetting };
+
+async function ShareList(req, resp) {
+    try {
+        let { limit = 5, page = 1 } = req.query;
+        let { blog_id = '', user_id = '' } = req.body;
+        let skip = 0;
+        limit = parseInt(limit);
+        page = parseInt(page);
+        skip = (page - 1) * limit;
+        if (!blog_id) {
+            return resp.status(200).json({ 'status': 400, 'message': 'blog id required.' });
+        }
+
+        let list = await SharesModel.aggregate([
+            {
+                $match: {
+                    $and: [
+                        { blog_id: new mongodb.ObjectId(blog_id) },
+                        { delete: 0 },
+                    ]
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "user_id",
+                    foreignField: "_id",
+                    as: "user_detail"
+                }
+            },
+            { $unwind: { path: "$user_detail", preserveNullAndEmptyArrays: true } },
+            { $sort: { _id: -1 } },
+            { $skip: skip },
+            { $limit: limit },
+            {
+                $project: {
+                    _id: 1,
+                    user_id: 1,
+                    blog_id: 1,
+                    created_at: 1,
+                    updated_at: 1,
+                    user_name: "$user_detail.name",
+                    user_photo: "$user_detail.photo",
+                    blog_post_by: 1,
+                }
+            }
+        ]);
+        let total = await SharesModel
+            .find({
+                $and: [
+                    { blog_id: new mongodb.ObjectId(blog_id) },
+                    { delete: 0 },
+                ]
+            }).countDocuments();
+        let resetdata_is = await Promise.all(
+            list.map(async (element) => {
+                let file_name = element.user_photo;
+                let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+                let file_view_path = `${APP_STORAGE}users/${file_name}`;
+                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                return {
+                    ...element,
+                    "created_at": moment(element.created_at).format('YYYY-MM-DD HH:mm:ss'),
+                    "updated_at": element.updated_at == null ? null : moment(element.updated_at).format('YYYY-MM-DD HH:mm:ss'),
+                    "user_file_view_path": file_dtl.file_view_path,
+                }
+            })
+        );
+        let result = Healper.PaginationData(resetdata_is, total, limit, page);
+        let mytotal = await SharesModel
+            .find({
+                $and: [
+                    { blog_id: new mongodb.ObjectId(blog_id) },
+                    { user_id: new mongodb.ObjectId(user_id) },
+                    { delete: 0 },
+                ]
+            })
+            .countDocuments();
+        let total_comment_on_share_post = 0;
+        
+        return resp.status(200).json({ "status": 200, "message": "Success", 'result': result, "mytotal": mytotal});
+    } catch (error) {
+        return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
+    }
+}
+
+module.exports = { UplodePhoto, CreactBlog, Myblogs, BlogByid, DeleteBlogByid, UpdateBlog, BlogsCategoryList, UplodeThumbnail, BlogByAlias, LikeAndDislike, UserComment, Comment, CommentList, hideComments, UpdateBlogArchive, CommentOnSharePost, LikeAndDislikeOnSharePost, ShareBlog, UpdateBlogSetting,ShareList };
