@@ -138,6 +138,8 @@ async function ChatList(req, resp) {
                     sender: 1,
                     intid: 1,
                     created_at: 1,
+                    chat_type: 1,
+                    info: 1,
                 },
             },
             { $sort: { intid: -1 } },
@@ -153,6 +155,8 @@ async function ChatList(req, resp) {
                 let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
                 return {
                     ...element,
+                    "chat_type": element.chat_type === undefined ? '0' : element.chat_type,
+                    "info": element.info === undefined ? '0' : element.info,
                     "created_at": moment(element.created_at).format('YYYY-MM-DD HH:mm:ss'),
                     "updated_at": element.updated_at == null ? null : moment(element.updated_at).format('YYYY-MM-DD HH:mm:ss'),
                     "file_dtl": file_dtl,
@@ -204,12 +208,19 @@ async function FindChat(req, resp) {
             bookmark: 1,
             sender: 1,
             created_at: 1,
+            chat_type: 1,
+            info: 1,
         });
         let file_name = chat.chat_file;
         let file_path = `${Healper.storageFolderPath()}user-chats/${file_name}`;
         let file_view_path = `${APP_STORAGE}user-chats/${file_name}`;
         let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
-        let rest_chat = { ...chat._doc, file_dtl: file_dtl };
+        let rest_chat = {
+            ...chat._doc,
+            "chat_type": chat._doc.chat_type === undefined ? '0' : chat._doc.chat_type,
+            "info": chat._doc.info === undefined ? '0' : chat._doc.info,
+            file_dtl: file_dtl
+        };
         let total = await UsersChatModel.find({
             $and: [
                 { from_user: new mongodb.ObjectId(from_user) },
@@ -254,6 +265,8 @@ async function SaveChat(req, resp) {
             sender: from_user,
             intid: intid,
             bookmark: false,
+            chat_type: '0',
+            info: '0',
             read_status: 0,
             created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
         });
@@ -278,6 +291,8 @@ async function SaveChat(req, resp) {
         let file_dtl1 = await Healper.FileInfo(file_name1, file_path1, file_view_path1);
         let rest_chat = {
             ...chat._doc,
+            "chat_type": chat._doc.chat_type === undefined ? '0' : chat._doc.chat_type,
+            "info": chat._doc.info === undefined ? '0' : chat._doc.info,
             created_at: moment(chat._doc.created_at).format('YYYY-MM-DD HH:mm:ss'),
             updated_at: chat._doc.updated_at == null ? null : moment(chat._doc.updated_at).format('YYYY-MM-DD HH:mm:ss'),
             file_dtl: file_dtl1
