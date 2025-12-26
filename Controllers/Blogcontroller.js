@@ -9,6 +9,7 @@ const AllNotificationsModel = require('../Models/AllNotificationsModel');
 const CommentsModel = require('../Models/CommentModel');
 const LikesModel = require('../Models/LikesModel');
 const SharesModel = require('../Models/SharesModel');
+const UsersChatModel = require('../Models/UsersChatModel');
 const { clients } = require("./WebsocketController");
 const Healper = require('./Healper');
 const bcrypt = require("bcrypt");
@@ -1818,10 +1819,10 @@ async function CommentList(req, resp) {
                     hide_status: 1,
                     shared_blog_id: 1,
                     shared_blog_comment_id: 1,
-                    shared_by_id:1,
+                    shared_by_id: 1,
                     shared_user_name: "$shared_user_detail.name",
                     shared_user_photo: "$shared_user_detail.photo",
-                    link_shared_blog_id:1,
+                    link_shared_blog_id: 1,
                 }
             }
         ]);
@@ -1847,10 +1848,10 @@ async function CommentList(req, resp) {
 
                 return {
                     ...element,
-                    "link_shared_blog_id": element.link_shared_blog_id==undefined ? '' :element.link_shared_blog_id,
-                    "shared_by_id": element.shared_by_id==undefined ? '' :element.shared_by_id,
-                    "shared_user_name": element.shared_user_name==undefined ? '' :element.shared_user_name,
-                    "shared_user_photo": element.shared_user_photo==undefined ? '' :element.shared_user_photo,
+                    "link_shared_blog_id": element.link_shared_blog_id == undefined ? '' : element.link_shared_blog_id,
+                    "shared_by_id": element.shared_by_id == undefined ? '' : element.shared_by_id,
+                    "shared_user_name": element.shared_user_name == undefined ? '' : element.shared_user_name,
+                    "shared_user_photo": element.shared_user_photo == undefined ? '' : element.shared_user_photo,
                     "hide_status": element.hide_status,
                     "blog_post_by": element.blog_post_by,
                     "shared_blog_id": element.shared_blog_id,
@@ -2314,7 +2315,7 @@ async function LikeAndDislikeOnSharePost(req, resp) {
                 blog_id: blog_id,
                 blog_post_by: blog.user_id,
                 link_shared_blog_id: main_blog._id,
-                shared_by_id:'',
+                shared_by_id: '',
                 shared_blog_id: '',
                 shared_blog_like_id: '',
                 delete: 0,
@@ -2570,8 +2571,8 @@ async function ShareBlog(req, resp) {
 
             share = new SharesModel({
                 user_id: user_id,
-                blog_id: main_blog._id,
-                blog_post_by: main_blog.user_id,
+                blog_id: blog._id,
+                blog_post_by: blog.user_id,
                 created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
             });
             share = await share.save();
@@ -2684,12 +2685,204 @@ async function ShareBlog(req, resp) {
     }
 }
 
+async function ShareBlogToFriends(req, resp) {
+    try {
+        let { user_id = '', blog_id = '', selected_user = [] } = req.body;
+        selected_user.push(32123123123);
+        if (!user_id) {
+            return resp.status(200).json({ 'status': 400, 'message': 'user id required.' });
+        }
+        if (!blog_id) {
+            return resp.status(200).json({ 'status': 400, 'message': 'blog id required.' });
+        }
+        if (!selected_user) {
+            return resp.status(200).json({ 'status': 400, 'message': 'friends id required.' });
+        } else if (selected_user.length <= 0) {
+            return resp.status(200).json({ 'status': 400, 'message': 'friends id required.' });
+        }
 
+        let user_friends_model = new UsersFriendModel;
+        let friends_list = await user_friends_model.getAllMyFriendFromUsersModalByid(user_id);
+        let friend_request_data_list = await user_friends_model.getAllMyFriendByid(user_id);
+        let friends_ids = friends_list.map((item, index) => {
+            return item._id.toString();
+        });
+
+        let filter_firends_id = selected_user.filter((users_id) => {
+            return friends_ids.includes(users_id) ? true : false;
+        });
+        let chat_data = [];
+
+        let data = {}, Blog = {}, share = {};
+        let blog = new BlogsModel();
+        blog = await blog.findByBlogId(blog_id);
+
+        if (blog.is_shared_blog == true) {
+            let main_blog = new BlogsModel();
+            main_blog = await main_blog.findByBlogId(blog.shared_blog_id);
+            data = {
+                user_id: user_id,
+                title: main_blog.title,
+                content: main_blog.content,
+                photo: main_blog.photo,
+                content_alias: `${main_blog.content_alias}-${Healper.generateRandomString(6)}`,
+                blog_type: main_blog.blog_type,
+                sort_description: main_blog.sort_description,
+                like: true,
+                share: true,
+                comment: true,
+                thumbnail: main_blog.thumbnail,
+                is_shared_blog: true,
+                shared_blog_id: main_blog._id,
+                main_blog_user_id: main_blog.user_id,
+                is_archive: false,
+                active_status: 1,
+                created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+            };
+            Blog = new BlogsModel(data);
+            Blog = await Blog.save();
+
+            share = new SharesModel({
+                user_id: user_id,
+                blog_id: blog._id,
+                blog_post_by: blog.user_id,
+                created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+            });
+            share = await share.save();
+        } else {
+            data = {
+                user_id: user_id,
+                title: blog.title,
+                content: blog.content,
+                photo: blog.photo,
+                content_alias: `${blog.content_alias}-${Healper.generateRandomString(6)}`,
+                blog_type: blog.blog_type,
+                sort_description: blog.sort_description,
+                like: true,
+                share: true,
+                comment: true,
+                thumbnail: blog.thumbnail,
+                is_shared_blog: true,
+                shared_blog_id: blog._id,
+                main_blog_user_id: blog.user_id,
+                is_archive: false,
+                active_status: 1,
+                created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+            };
+            Blog = new BlogsModel(data);
+            Blog = await Blog.save();
+
+            share = new SharesModel({
+                user_id: user_id,
+                blog_id: blog._id,
+                blog_post_by: blog.user_id,
+                created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+            });
+            share = await share.save();
+        }
+
+        let obj = {}, from = {}, notify_toid = '';
+        //////////////////// notify to share blog post by //////////// 
+        if (blog !== null) {
+            notify_toid = blog.is_shared_blog == true ? blog.user_id : data.main_blog_user_id;
+            from = new UsersModel();
+            from = await from.findByUserId(user_id);
+
+            let to = new UsersModel();
+            to = await to.findByUserId(notify_toid);
+
+            let UsersFriend = new UsersFriendModel();
+            UsersFriend = await UsersFriend.MyFriend(user_id, notify_toid);
+
+            obj = {
+                notify_toid: notify_toid,
+                userid: user_id,
+                requestid: UsersFriend.length > 0 ? UsersFriend[0].requestid : notify_toid,
+                from: user_id,
+                to: notify_toid,
+                accept_status: 0,
+                from_user_name: from.name,
+                from_user_photo: from.photo,
+                to_user_name: to.name,
+                to_user_photo: to.photo,
+                category: new_share,
+                remove_byid: data.content_alias,
+                blog_id: data._id,
+                text: data.title,
+                comment: '',
+                read_status: 0,
+                created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+            }
+            let notification = new AllNotificationsModel(obj);
+            notification = await notification.save();
+            let file_name = from.photo;
+            let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+            let file_view_path = `${APP_STORAGE}users/${file_name}`;
+            let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+
+            let to_file_name = to.photo;
+            let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
+            let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
+            let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
+            let reset_notification = {
+                ...notification._doc,
+                to_user_file_view_path: to_file_dtl.file_view_path,
+                from_user_file_view_path: file_dtl.file_view_path,
+                created_at: moment(notification.created_at).format('YYYY-MM-DD HH:mm:ss'),
+            };
+            if (clients[notify_toid]) {
+                clients[notify_toid].sendUTF(JSON.stringify({ "code": new_share, "message": "new share", 'result': reset_notification }));
+            }
+        }
+
+        if (filter_firends_id.length > 0) {
+            let intid = await UsersChatModel.find({ delete: 0 }).countDocuments();
+            intid = intid + 1;
+            filter_firends_id.forEach((user_ids) => {
+                chat_data.push({
+                    from_user: user_id,
+                    to_user: user_ids,
+                    message: `${from.name} shared a post. ${data.title}`,
+                    sender: user_id,
+                    intid: intid++,
+                    bookmark: false,
+                    chat_type: '1',
+                    info: blog_id,
+                    read_status: 0,
+                    created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+                });
+            });
+            let save_friends = await UsersChatModel.insertMany(chat_data);
+            console.log(save_friends);
+        }
+
+        let total_shares = await SharesModel
+            .find({
+                $and: [
+                    { blog_id: new mongodb.ObjectId(blog_id) },
+                    { delete: 0 }
+                ]
+            })
+            .countDocuments();
+        let my_shares = await SharesModel
+            .find({
+                $and: [
+                    { blog_id: new mongodb.ObjectId(blog_id) },
+                    { user_id: new mongodb.ObjectId(user_id) },
+                    { delete: 0 }
+                ]
+            })
+            .countDocuments();
+        return resp.status(200).json({ "status": 200, "message": "Success", 'result': share, "blog": Blog, total_shares: total_shares, my_shares: my_shares });
+    } catch (error) {
+        return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
+    }
+}
 
 async function UpdateBlogSetting(req, resp) {
     try {
-        
-        let { id="", like=true, share=true, comment=true} = req.body;
+
+        let { id = "", like = true, share = true, comment = true } = req.body;
 
         if (!id) {
             return resp.status(200).json({ 'status': 400, 'message': 'blog id required.' });
@@ -2791,11 +2984,11 @@ async function ShareList(req, resp) {
             })
             .countDocuments();
         let total_comment_on_share_post = 0;
-        
-        return resp.status(200).json({ "status": 200, "message": "Success", 'result': result, "mytotal": mytotal});
+
+        return resp.status(200).json({ "status": 200, "message": "Success", 'result': result, "mytotal": mytotal });
     } catch (error) {
         return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
     }
 }
 
-module.exports = { UplodePhoto, CreactBlog, Myblogs, BlogByid, DeleteBlogByid, UpdateBlog, BlogsCategoryList, UplodeThumbnail, BlogByAlias, LikeAndDislike, UserComment, Comment, CommentList, hideComments, UpdateBlogArchive, CommentOnSharePost, LikeAndDislikeOnSharePost, ShareBlog, UpdateBlogSetting,ShareList };
+module.exports = { UplodePhoto, CreactBlog, Myblogs, BlogByid, DeleteBlogByid, UpdateBlog, BlogsCategoryList, UplodeThumbnail, BlogByAlias, LikeAndDislike, UserComment, Comment, CommentList, hideComments, UpdateBlogArchive, CommentOnSharePost, LikeAndDislikeOnSharePost, ShareBlog, UpdateBlogSetting, ShareList, ShareBlogToFriends };

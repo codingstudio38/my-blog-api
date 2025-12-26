@@ -58,6 +58,7 @@ routeapp.post("/blog-comment-list", Auth, Blogcontroller.CommentList);
 routeapp.post("/hide-blog-comment", Auth, Blogcontroller.hideComments);
 routeapp.post("/update-blog-archive", Auth, Blogcontroller.UpdateBlogArchive);
 routeapp.post("/share-blog", Auth, Blogcontroller.ShareBlog);
+routeapp.post("/share-blog-to-friends", Auth, Blogcontroller.ShareBlogToFriends);
 routeapp.post("/like-and-dislike-on-sharepost", Auth, Blogcontroller.LikeAndDislikeOnSharePost);
 routeapp.post("/comment-on-sharepost", Auth, Blogcontroller.CommentOnSharePost);
 routeapp.post("/update-blog-settings", Auth, Blogcontroller.UpdateBlogSetting);

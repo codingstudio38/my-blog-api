@@ -25,7 +25,7 @@ Schema.methods.IsFriend = async function (userid, friendid) {
 }
 Schema.methods.MyFriend = async function (userid, friendid) {
     try {
-       return await mongoose.model('users_friends').aggregate([
+        return await mongoose.model('users_friends').aggregate([
             {
                 $match: {
                     $and: [
@@ -115,6 +115,52 @@ Schema.methods.getAllMyFriendByid = async function (userid) {
                     from_user_id: "$from_user_details._id",
                 }
             }
+        ]);
+    } catch (error) {
+        throw new Error(error);
+    }
+}
+Schema.methods.getAllMyFriendFromUsersModalByid = async function (userid) {
+    try {
+        return await mongoose.model('users').aggregate([
+            {
+                $match: {
+                    $and: [
+                        { 'delete': 0 },
+                    ],
+                }
+            },
+            {
+                $lookup: {
+                    from: "users_friends",
+                    let: { friendId: "$_id", loggedinuserid: new mongodb.ObjectId(userid) },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$userid", "$$loggedinuserid"] },
+                                        { $eq: ["$friend", "$$friendId"] },
+                                        { $eq: ["$delete", 0] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "friendship"
+                }
+            },
+            {
+                $addFields: {
+                    is_friend: { $size: "$friendship" }
+                }
+            },
+            {
+                $match: {
+                    is_friend: { $gt: 0 }
+                }
+            },
+
         ]);
     } catch (error) {
         throw new Error(error);
