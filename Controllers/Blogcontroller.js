@@ -2688,7 +2688,6 @@ async function ShareBlog(req, resp) {
 async function ShareBlogToFriends(req, resp) {
     try {
         let { user_id = '', blog_id = '', selected_user = [] } = req.body;
-        selected_user.push(32123123123);
         if (!user_id) {
             return resp.status(200).json({ 'status': 400, 'message': 'user id required.' });
         }
@@ -2739,16 +2738,16 @@ async function ShareBlogToFriends(req, resp) {
                 active_status: 1,
                 created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
             };
-            Blog = new BlogsModel(data);
-            Blog = await Blog.save();
+            // Blog = new BlogsModel(data);
+            // Blog = await Blog.save();
 
-            share = new SharesModel({
-                user_id: user_id,
-                blog_id: blog._id,
-                blog_post_by: blog.user_id,
-                created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
-            });
-            share = await share.save();
+            // share = new SharesModel({
+            //     user_id: user_id,
+            //     blog_id: blog._id,
+            //     blog_post_by: blog.user_id,
+            //     created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+            // });
+            // share = await share.save();
         } else {
             data = {
                 user_id: user_id,
@@ -2769,16 +2768,16 @@ async function ShareBlogToFriends(req, resp) {
                 active_status: 1,
                 created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
             };
-            Blog = new BlogsModel(data);
-            Blog = await Blog.save();
+            // Blog = new BlogsModel(data);
+            // Blog = await Blog.save();
 
-            share = new SharesModel({
-                user_id: user_id,
-                blog_id: blog._id,
-                blog_post_by: blog.user_id,
-                created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
-            });
-            share = await share.save();
+            // share = new SharesModel({
+            //     user_id: user_id,
+            //     blog_id: blog._id,
+            //     blog_post_by: blog.user_id,
+            //     created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+            // });
+            // share = await share.save();
         }
 
         let obj = {}, from = {}, notify_toid = '';
@@ -2813,26 +2812,26 @@ async function ShareBlogToFriends(req, resp) {
                 read_status: 0,
                 created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
             }
-            let notification = new AllNotificationsModel(obj);
-            notification = await notification.save();
-            let file_name = from.photo;
-            let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
-            let file_view_path = `${APP_STORAGE}users/${file_name}`;
-            let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+            // let notification = new AllNotificationsModel(obj);
+            // notification = await notification.save();
+            // let file_name = from.photo;
+            // let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+            // let file_view_path = `${APP_STORAGE}users/${file_name}`;
+            // let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
 
-            let to_file_name = to.photo;
-            let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
-            let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
-            let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
-            let reset_notification = {
-                ...notification._doc,
-                to_user_file_view_path: to_file_dtl.file_view_path,
-                from_user_file_view_path: file_dtl.file_view_path,
-                created_at: moment(notification.created_at).format('YYYY-MM-DD HH:mm:ss'),
-            };
-            if (clients[notify_toid]) {
-                clients[notify_toid].sendUTF(JSON.stringify({ "code": new_share, "message": "new share", 'result': reset_notification }));
-            }
+            // let to_file_name = to.photo;
+            // let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
+            // let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
+            // let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
+            // let reset_notification = {
+            //     ...notification._doc,
+            //     to_user_file_view_path: to_file_dtl.file_view_path,
+            //     from_user_file_view_path: file_dtl.file_view_path,
+            //     created_at: moment(notification.created_at).format('YYYY-MM-DD HH:mm:ss'),
+            // };
+            // if (clients[notify_toid]) {
+            //     clients[notify_toid].sendUTF(JSON.stringify({ "code": new_share, "message": "new share", 'result': reset_notification }));
+            // }
         }
 
         if (filter_firends_id.length > 0) {
