@@ -316,110 +316,8 @@ async function FindChat(req, resp) {
                     message: "Invalid Id. id must be 24 characters.",
                 });
         }
-
-        let chat = await UsersChatModel.aggregate([
-            {
-                $match: {
-                    $and: [
-                        { delete: 0 },
-                        { _id: new mongodb.ObjectId(chatid) },
-                    ]
-                },
-            },
-            {
-                $addFields: {
-                    info_obj_id: {
-                        $cond: {
-                            if: {
-                                $or: [
-                                    { $eq: ["$info", ""] },
-                                    { $eq: ["$info", null] },
-                                    { $eq: ["$info", '0'] },
-                                    { $eq: [{ $type: "$info" }, "missing"] }
-                                ]
-                            },
-                            then: '',
-                            else: {
-                                $toObjectId: "$info"
-                            }
-                        }
-                    }
-                }
-            },
-            {
-                $lookup: {
-                    from: "blogs",
-                    localField: "_id",
-                    foreignField: "info_obj_id",
-                    as: "blogs_detail"
-                }
-            },
-            { $unwind: { path: "$blogs_detail", preserveNullAndEmptyArrays: true } },
-            {
-                $addFields: {
-                    shared_blog_obj_id: {
-                        $convert: {
-                            input: "$blogs_detail.shared_blog_id",
-                            to: "objectId",
-                            onError: null,
-                            onNull: null
-                        }
-                        // $cond: {
-                        //     if: {
-                        //         $or: [
-                        //             { $eq: ["blogs_detail.shared_blog_id", ""] },
-                        //             { $eq: ["blogs_detail.shared_blog_id", null] },
-                        //             { $eq: ["blogs_detail.shared_blog_id", '0'] },
-                        //             { $eq: [{ $type: "blogs_detail.shared_blog_id" }, "missing"] }
-                        //         ]
-                        //     },
-                        //     then: '',
-                        //     else: {
-                        //         $toObjectId: "$blogs_detail.shared_blog_id"
-                        //     }
-                        // }
-                    }
-                }
-            },
-            {
-                $lookup: {
-                    from: "blogs",
-                    localField: "shared_blog_obj_id",
-                    foreignField: "_id",
-                    as: "main_blog_detail"
-                }
-            },
-            { $unwind: { path: "$main_blog_detail", preserveNullAndEmptyArrays: true } },
-            {
-                $project: {
-                    from_user: 1,
-                    to_user: 1,
-                    message: 1,
-                    chat_file: 1,
-                    bookmark: 1,
-                    sender: 1,
-                    intid: 1,
-                    created_at: 1,
-                    chat_type: 1,
-                    info: 1,
-                    'blog_title': '$blogs_detail.title',
-                    'blog_type': '$blogs_detail.blog_type',
-                    'blog_photo': '$blogs_detail.photo',
-                    'blog_thumbnail': '$blogs_detail.thumbnail',
-                    'blog_id': '$blogs_detail._id',
-                    'blog_alias': '$blogs_detail.content_alias',
-                    'is_shared_blog': '$blogs_detail.is_shared_blog',
-
-                    'main_blog_title': '$main_blog_detail.title',
-                    'main_blog_type': '$main_blog_detail.blog_type',
-                    'main_blog_photo': '$main_blog_detail.photo',
-                    'main_blog_thumbnail': '$main_blog_detail.thumbnail',
-                    'main_blog_id': '$main_blog_detail._id',
-                    'main_blog_alias': '$main_blog_detail.content_alias',
-                    'main_is_shared_blog': '$main_blog_detail.is_shared_blog',
-                },
-            },
-        ]);
+        let chat = new UsersChatModel;
+        chat = await chat.findBChatId(chatid);
         chat = chat.length > 0 ? chat[0] : {};
         let file_name = chat.chat_file;
         let file_path = `${Healper.storageFolderPath()}user-chats/${file_name}`;
@@ -470,7 +368,9 @@ async function FindChat(req, resp) {
 
             "chat_type": chat.chat_type === undefined ? '0' : chat.chat_type,
             "info": chat.info === undefined ? '0' : chat.info,
-            file_dtl: file_dtl
+            file_dtl: file_dtl,
+            "created_at": moment(chat.created_at).format('YYYY-MM-DD HH:mm:ss'),
+            "updated_at": chat.updated_at == null ? null : moment(chat.updated_at).format('YYYY-MM-DD HH:mm:ss'),
         };
         let total = await UsersChatModel.find({
             $and: [
@@ -536,19 +436,63 @@ async function SaveChat(req, resp) {
         }
         let chat = await NewChat.save();
 
-        let file_name1 = chat.chat_file;
-        let file_path1 = `${Healper.storageFolderPath()}user-chats/${file_name1}`;
-        let file_view_path1 = `${APP_STORAGE}user-chats/${file_name1}`;
-        let file_dtl1 = await Healper.FileInfo(file_name1, file_path1, file_view_path1);
-        let rest_chat = {
-            ...chat._doc,
-            "chat_type": chat._doc.chat_type === undefined ? '0' : chat._doc.chat_type,
-            "info": chat._doc.info === undefined ? '0' : chat._doc.info,
-            created_at: moment(chat._doc.created_at).format('YYYY-MM-DD HH:mm:ss'),
-            updated_at: chat._doc.updated_at == null ? null : moment(chat._doc.updated_at).format('YYYY-MM-DD HH:mm:ss'),
-            file_dtl: file_dtl1
-        };
 
+        let findchat = new UsersChatModel;
+        findchat = await findchat.findBChatId(chat._doc._id);
+        findchat = findchat.length > 0 ? findchat[0] : {};
+        let file_name11 = chat.chat_file;
+        let file_path11 = `${Healper.storageFolderPath()}user-chats/${file_name11}`;
+        let file_view_path11 = `${APP_STORAGE}user-chats/${file_name11}`;
+        let file_dtl11 = await Healper.FileInfo(file_name11, file_path11, file_view_path11);
+
+        let file_name1 = chat.blog_photo;
+        let file_path1 = `${Healper.storageFolderPath()}user-blogs/${file_name1}`;
+        let file_view_path1 = `${APP_STORAGE}user-blogs/${file_name1}`;
+        let file_dtl1 = await Healper.FileInfo(file_name1, file_path1, file_view_path1);
+
+        let file_name2 = chat.blog_thumbnail;
+        let file_path2 = `${Healper.storageFolderPath()}user-blogs/thumbnail/${file_name2}`;
+        let file_view_path2 = `${APP_STORAGE}user-blogs/thumbnail/${file_name2}`;
+        let file_dtl2 = await Healper.FileInfo(file_name2, file_path2, file_view_path2);
+
+        let file_name3 = chat.main_blog_photo;
+        let file_path3 = `${Healper.storageFolderPath()}user-blogs/${file_name3}`;
+        let file_view_path3 = `${APP_STORAGE}user-blogs/${file_name3}`;
+        let file_dtl3 = await Healper.FileInfo(file_name3, file_path3, file_view_path3);
+
+        let file_name4 = chat.main_blog_thumbnail;
+        let file_path4 = `${Healper.storageFolderPath()}user-blogs/thumbnail/${file_name4}`;
+        let file_view_path4 = `${APP_STORAGE}user-blogs/thumbnail/${file_name4}`;
+        let file_dtl4 = await Healper.FileInfo(file_name4, file_path4, file_view_path4);
+
+        let rest_chat = {
+            ...findchat,
+            "main_blog_title": findchat.main_blog_title === undefined ? '' : findchat.main_blog_title,
+            "main_blog_type": findchat.main_blog_type === undefined ? '' : findchat.main_blog_type,
+            "main_blog_photo": findchat.main_blog_photo === undefined ? '' : findchat.main_blog_photo,
+            "main_blog_thumbnail": findchat.main_blog_thumbnail === undefined ? '' : findchat.main_blog_thumbnail,
+            "main_blog_id": findchat.main_blog_id === undefined ? '' : findchat.main_blog_id,
+            "main_blog_alias": findchat.main_blog_alias === undefined ? '' : findchat.main_blog_alias,
+            "main_is_shared_blog": findchat.main_is_shared_blog === undefined ? false : findchat.main_is_shared_blog,
+            "main_blog_photo_dtl": file_dtl3,
+            "main_blog_thumbnail_dtl": file_dtl4,
+
+            "blog_title": findchat.blog_title === undefined ? '' : findchat.blog_title,
+            "blog_type": findchat.blog_type === undefined ? '' : findchat.blog_type,
+            "blog_photo": findchat.blog_photo === undefined ? '' : findchat.blog_photo,
+            "blog_thumbnail": findchat.blog_thumbnail === undefined ? '' : findchat.blog_thumbnail,
+            "blog_id": findchat.blog_id === undefined ? '' : findchat.blog_id,
+            "blog_alias": findchat.blog_alias === undefined ? '' : findchat.blog_alias,
+            "is_shared_blog": findchat.is_shared_blog === undefined ? false : findchat.is_shared_blog,
+            "blog_photo_dtl": file_dtl1,
+            "blog_thumbnail_dtl": file_dtl2,
+
+            "chat_type": findchat.chat_type === undefined ? '0' : findchat.chat_type,
+            "info": findchat.info === undefined ? '0' : findchat.info,
+            file_dtl: file_dtl11,
+            "created_at": moment(findchat.created_at).format('YYYY-MM-DD HH:mm:ss'),
+            "updated_at": findchat.updated_at == null ? null : moment(findchat.updated_at).format('YYYY-MM-DD HH:mm:ss'),
+        };
 
 
         let user_friends_model = new UsersFriendModel;

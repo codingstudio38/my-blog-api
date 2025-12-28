@@ -156,11 +156,52 @@ Schema.methods.getAllMyFriendFromUsersModalByid = async function (userid) {
                 }
             },
             {
+                $lookup: {
+                    from: "users_friends",
+                    let: { friendId: "$_id", loggedinuserid: new mongodb.ObjectId(userid) },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$userid", "$$loggedinuserid"] },
+                                        { $eq: ["$friend", "$$friendId"] },
+                                        { $eq: ["$delete", 0] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "friendship_details"
+                }
+            },
+            { $unwind: { path: "$friendship_details", preserveNullAndEmptyArrays: true } },
+            {
                 $match: {
                     is_friend: { $gt: 0 }
                 }
             },
-
+            {
+                $project: {
+                    _id: 1,
+                    name: 1,
+                    phone: 1,
+                    email: 1,
+                    photo: 1,
+                    password: 1,
+                    occupation: 1,
+                    skills: 1,
+                    dob: 1,
+                    country: 1,
+                    address: 1,
+                    about_us: 1,
+                    active_status: 1,
+                    created_at: 1,
+                    updated_at: 1,
+                    wsstatus: 1,
+                    requestid: '$friendship_details.requestid',
+                },
+            },
         ]);
     } catch (error) {
         throw new Error(error);

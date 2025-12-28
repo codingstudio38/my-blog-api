@@ -22,6 +22,7 @@ const blog_post_status = process.env.blog_post_status;
 const new_comment = process.env.new_comment;
 const new_like = process.env.new_like;
 const new_share = process.env.new_share;
+const new_chat_message = process.env.new_chat_message;
 async function UplodePhoto(req, resp) {
     try {
         let { userid = '' } = req.body;
@@ -2700,9 +2701,14 @@ async function ShareBlogToFriends(req, resp) {
             return resp.status(200).json({ 'status': 400, 'message': 'friends id required.' });
         }
 
+        let from = new UsersModel();
+        from = await from.findByUserId(user_id);
+
         let user_friends_model = new UsersFriendModel;
+
         let friends_list = await user_friends_model.getAllMyFriendFromUsersModalByid(user_id);
-        let friend_request_data_list = await user_friends_model.getAllMyFriendByid(user_id);
+
+        // let friend_request_data_list = await user_friends_model.getAllMyFriendByid(user_id);
         let friends_ids = friends_list.map((item, index) => {
             return item._id.toString();
         });
@@ -2710,128 +2716,21 @@ async function ShareBlogToFriends(req, resp) {
         let filter_firends_id = selected_user.filter((users_id) => {
             return friends_ids.includes(users_id) ? true : false;
         });
-        let chat_data = [];
 
-        let data = {}, Blog = {}, share = {};
+        let filter_friends_list = friends_list.filter((user) => {
+            const userId = user._id.toString();
+            return filter_firends_id.includes(userId) ? true : false;
+        });
+
+        let chat_data = [];
         let blog = new BlogsModel();
         blog = await blog.findByBlogId(blog_id);
 
-        if (blog.is_shared_blog == true) {
-            let main_blog = new BlogsModel();
+        let main_blog = new BlogsModel();
+        if (blog.is_shared_blog) {
             main_blog = await main_blog.findByBlogId(blog.shared_blog_id);
-            data = {
-                user_id: user_id,
-                title: main_blog.title,
-                content: main_blog.content,
-                photo: main_blog.photo,
-                content_alias: `${main_blog.content_alias}-${Healper.generateRandomString(6)}`,
-                blog_type: main_blog.blog_type,
-                sort_description: main_blog.sort_description,
-                like: true,
-                share: true,
-                comment: true,
-                thumbnail: main_blog.thumbnail,
-                is_shared_blog: true,
-                shared_blog_id: main_blog._id,
-                main_blog_user_id: main_blog.user_id,
-                is_archive: false,
-                active_status: 1,
-                created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
-            };
-            // Blog = new BlogsModel(data);
-            // Blog = await Blog.save();
-
-            // share = new SharesModel({
-            //     user_id: user_id,
-            //     blog_id: blog._id,
-            //     blog_post_by: blog.user_id,
-            //     created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
-            // });
-            // share = await share.save();
         } else {
-            data = {
-                user_id: user_id,
-                title: blog.title,
-                content: blog.content,
-                photo: blog.photo,
-                content_alias: `${blog.content_alias}-${Healper.generateRandomString(6)}`,
-                blog_type: blog.blog_type,
-                sort_description: blog.sort_description,
-                like: true,
-                share: true,
-                comment: true,
-                thumbnail: blog.thumbnail,
-                is_shared_blog: true,
-                shared_blog_id: blog._id,
-                main_blog_user_id: blog.user_id,
-                is_archive: false,
-                active_status: 1,
-                created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
-            };
-            // Blog = new BlogsModel(data);
-            // Blog = await Blog.save();
-
-            // share = new SharesModel({
-            //     user_id: user_id,
-            //     blog_id: blog._id,
-            //     blog_post_by: blog.user_id,
-            //     created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
-            // });
-            // share = await share.save();
-        }
-
-        let obj = {}, from = {}, notify_toid = '';
-        //////////////////// notify to share blog post by //////////// 
-        if (blog !== null) {
-            notify_toid = blog.is_shared_blog == true ? blog.user_id : data.main_blog_user_id;
-            from = new UsersModel();
-            from = await from.findByUserId(user_id);
-
-            let to = new UsersModel();
-            to = await to.findByUserId(notify_toid);
-
-            let UsersFriend = new UsersFriendModel();
-            UsersFriend = await UsersFriend.MyFriend(user_id, notify_toid);
-
-            obj = {
-                notify_toid: notify_toid,
-                userid: user_id,
-                requestid: UsersFriend.length > 0 ? UsersFriend[0].requestid : notify_toid,
-                from: user_id,
-                to: notify_toid,
-                accept_status: 0,
-                from_user_name: from.name,
-                from_user_photo: from.photo,
-                to_user_name: to.name,
-                to_user_photo: to.photo,
-                category: new_share,
-                remove_byid: data.content_alias,
-                blog_id: data._id,
-                text: data.title,
-                comment: '',
-                read_status: 0,
-                created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
-            }
-            // let notification = new AllNotificationsModel(obj);
-            // notification = await notification.save();
-            // let file_name = from.photo;
-            // let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
-            // let file_view_path = `${APP_STORAGE}users/${file_name}`;
-            // let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
-
-            // let to_file_name = to.photo;
-            // let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
-            // let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
-            // let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
-            // let reset_notification = {
-            //     ...notification._doc,
-            //     to_user_file_view_path: to_file_dtl.file_view_path,
-            //     from_user_file_view_path: file_dtl.file_view_path,
-            //     created_at: moment(notification.created_at).format('YYYY-MM-DD HH:mm:ss'),
-            // };
-            // if (clients[notify_toid]) {
-            //     clients[notify_toid].sendUTF(JSON.stringify({ "code": new_share, "message": "new share", 'result': reset_notification }));
-            // }
+            main_blog = {};
         }
 
         if (filter_firends_id.length > 0) {
@@ -2841,7 +2740,7 @@ async function ShareBlogToFriends(req, resp) {
                 chat_data.push({
                     from_user: user_id,
                     to_user: user_ids,
-                    message: `${from.name} shared a post. ${data.title}`,
+                    message: `${from.name} shared a post. ${blog.is_shared_blog ? main_blog.title : blog.title}`,
                     sender: user_id,
                     intid: intid++,
                     bookmark: false,
@@ -2851,8 +2750,217 @@ async function ShareBlogToFriends(req, resp) {
                     created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
                 });
             });
-            let save_friends = await UsersChatModel.insertMany(chat_data);
-            console.log(save_friends);
+            //// save and reset chat data
+            let save_chats = await UsersChatModel.insertMany(chat_data);
+            let all_save_chat_ids = save_chats.map((item, index) => {
+                return item._doc._id;
+            });
+            save_chats = await UsersChatModel.aggregate([
+                {
+                    $match: {
+                        _id: { $in: all_save_chat_ids },
+                    },
+                },
+                {
+                    $addFields: {
+                        info_obj_id: {
+                            $cond: {
+                                if: {
+                                    $or: [
+                                        { $eq: ["$info", ""] },
+                                        { $eq: ["$info", null] },
+                                        { $eq: ["$info", '0'] },
+                                        { $eq: [{ $type: "$info" }, "missing"] }
+                                    ]
+                                },
+                                then: '',
+                                else: {
+                                    $toObjectId: "$info"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "blogs",
+                        localField: "info_obj_id",
+                        foreignField: "_id",
+                        as: "blogs_detail"
+                    }
+                },
+                { $unwind: { path: "$blogs_detail", preserveNullAndEmptyArrays: true } },
+                {
+                    $addFields: {
+                        shared_blog_obj_id: {
+                            $convert: {
+                                input: "$blogs_detail.shared_blog_id",
+                                to: "objectId",
+                                onError: null,
+                                onNull: null
+                            }
+                        }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "blogs",
+                        localField: "shared_blog_obj_id",
+                        foreignField: "_id",
+                        as: "main_blog_detail"
+                    }
+                },
+                { $unwind: { path: "$main_blog_detail", preserveNullAndEmptyArrays: true } },
+                {
+                    $project: {
+                        from_user: 1,
+                        to_user: 1,
+                        message: 1,
+                        chat_file: 1,
+                        bookmark: 1,
+                        sender: 1,
+                        intid: 1,
+                        created_at: 1,
+                        chat_type: 1,
+                        info: 1,
+                        'blog_title': '$blogs_detail.title',
+                        'blog_type': '$blogs_detail.blog_type',
+                        'blog_photo': '$blogs_detail.photo',
+                        'blog_thumbnail': '$blogs_detail.thumbnail',
+                        'blog_id': '$blogs_detail._id',
+                        'blog_alias': '$blogs_detail.content_alias',
+                        'is_shared_blog': '$blogs_detail.is_shared_blog',
+
+                        'main_blog_title': '$main_blog_detail.title',
+                        'main_blog_type': '$main_blog_detail.blog_type',
+                        'main_blog_photo': '$main_blog_detail.photo',
+                        'main_blog_thumbnail': '$main_blog_detail.thumbnail',
+                        'main_blog_id': '$main_blog_detail._id',
+                        'main_blog_alias': '$main_blog_detail.content_alias',
+                        'main_is_shared_blog': '$main_blog_detail.is_shared_blog',
+                    },
+                },
+            ]);
+
+            let resetchatdata_is = await Promise.all(
+                save_chats.map(async element => {
+                    let file_name = `${element.chat_file}`;
+                    let file_path = `${Healper.storageFolderPath()}user-blogs/${file_name}`;
+                    let file_view_path = `${APP_STORAGE}user-blogs/${file_name}`;
+                    let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+
+                    let file_name1 = element.blog_photo;
+                    let file_path1 = `${Healper.storageFolderPath()}user-blogs/${file_name1}`;
+                    let file_view_path1 = `${APP_STORAGE}user-blogs/${file_name1}`;
+                    let file_dtl1 = await Healper.FileInfo(file_name1, file_path1, file_view_path1);
+
+                    let file_name2 = element.blog_thumbnail;
+                    let file_path2 = `${Healper.storageFolderPath()}user-blogs/thumbnail/${file_name2}`;
+                    let file_view_path2 = `${APP_STORAGE}user-blogs/thumbnail/${file_name2}`;
+                    let file_dtl2 = await Healper.FileInfo(file_name2, file_path2, file_view_path2);
+
+                    let file_name3 = element.main_blog_photo;
+                    let file_path3 = `${Healper.storageFolderPath()}user-blogs/${file_name3}`;
+                    let file_view_path3 = `${APP_STORAGE}user-blogs/${file_name3}`;
+                    let file_dtl3 = await Healper.FileInfo(file_name3, file_path3, file_view_path3);
+
+                    let file_name4 = element.main_blog_thumbnail;
+                    let file_path4 = `${Healper.storageFolderPath()}user-blogs/thumbnail/${file_name4}`;
+                    let file_view_path4 = `${APP_STORAGE}user-blogs/thumbnail/${file_name4}`;
+                    let file_dtl4 = await Healper.FileInfo(file_name4, file_path4, file_view_path4);
+
+                    return {
+                        ...element,
+                        "main_blog_title": element.main_blog_title === undefined ? '' : element.main_blog_title,
+                        "main_blog_type": element.main_blog_type === undefined ? '' : element.main_blog_type,
+                        "main_blog_photo": element.main_blog_photo === undefined ? '' : element.main_blog_photo,
+                        "main_blog_thumbnail": element.main_blog_thumbnail === undefined ? '' : element.main_blog_thumbnail,
+                        "main_blog_id": element.main_blog_id === undefined ? '' : element.main_blog_id,
+                        "main_blog_alias": element.main_blog_alias === undefined ? '' : element.main_blog_alias,
+                        "main_is_shared_blog": element.main_is_shared_blog === undefined ? false : element.main_is_shared_blog,
+                        "main_blog_photo_dtl": file_dtl3,
+                        "main_blog_thumbnail_dtl": file_dtl4,
+
+                        "blog_title": element.blog_title === undefined ? '' : element.blog_title,
+                        "blog_type": element.blog_type === undefined ? '' : element.blog_type,
+                        "blog_photo": element.blog_photo === undefined ? '' : element.blog_photo,
+                        "blog_thumbnail": element.blog_thumbnail === undefined ? '' : element.blog_thumbnail,
+                        "blog_id": element.blog_id === undefined ? '' : element.blog_id,
+                        "blog_alias": element.blog_alias === undefined ? '' : element.blog_alias,
+                        "is_shared_blog": element.is_shared_blog === undefined ? false : element.is_shared_blog,
+                        "blog_photo_dtl": file_dtl1,
+                        "blog_thumbnail_dtl": file_dtl2,
+
+                        "chat_type": element.chat_type === undefined ? '0' : element.chat_type,
+                        "info": element.info === undefined ? '0' : element.info,
+                        "file_dtl": file_dtl,
+                        "created_at": moment(element.created_at).format('YYYY-MM-DD HH:mm:ss'),
+                        "updated_at": element.updated_at == null ? null : moment(element.updated_at).format('YYYY-MM-DD HH:mm:ss'),
+                    }
+                })
+            );
+
+            /// save and reset notification data
+            let insert_notifications = [];
+            filter_friends_list.forEach((user) => {
+                let chatdata = resetchatdata_is.filter((chat) => {
+                    let chat_to_user = chat.to_user.toString();
+                    let to_user = user._id.toString();
+                    return to_user == chat_to_user;
+                });
+                insert_notifications.push({
+                    notify_toid: user._id,
+                    userid: from._id,
+                    requestid: user.requestid,
+                    from: from._id,
+                    to: user._id,
+                    accept_status: 0,
+                    from_user_name: from.name,
+                    from_user_photo: from.photo,
+                    to_user_name: user.name,
+                    to_user_photo: user.photo,
+                    category: new_chat_message,
+                    remove_byid: '',
+                    blog_id: chatdata.length > 0 ? chatdata[0]._id : '',
+                    text: chatdata.length > 0 ? chatdata[0].message : '',
+                    read_status: 0,
+                    created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+                });
+            })
+            let save_notifications = await AllNotificationsModel.insertMany(insert_notifications);
+
+            let reset_notifications = await Promise.all(
+                save_notifications.map(async element => {
+                    let noti_file_name = from.photo;
+                    let noti_file_path = `${Healper.storageFolderPath()}users/${noti_file_name}`;
+                    let noti_file_view_path = `${APP_STORAGE}users/${noti_file_name}`;
+                    let noti_file_dtl = await Healper.FileInfo(noti_file_name, noti_file_path, noti_file_view_path);
+
+                    let noti_to_file_name = element._doc.to_user_photo;
+                    let noti_to_file_path = `${Healper.storageFolderPath()}users/${noti_to_file_name}`;
+                    let noti_to_file_view_path = `${APP_STORAGE}users/${noti_to_file_name}`;
+                    let noti_to_file_dtl = await Healper.FileInfo(noti_to_file_name, noti_to_file_path, noti_to_file_view_path);
+                    return {
+                        ...element._doc,
+                        to_user_file_view_path: noti_to_file_dtl.file_view_path,
+                        from_user_file_view_path: noti_file_dtl.file_view_path,
+                        created_at: moment(element._doc.created_at).format('YYYY-MM-DD HH:mm:ss'),
+                    }
+                })
+            );
+
+            reset_notifications.forEach((notification) => {
+                let notify_to_user = notification.to.toString();
+                let rest_chat = resetchatdata_is.filter((chat) => {
+                    let chat_to_user = chat.to_user.toString();
+                    return notify_to_user == chat_to_user;
+                });
+                rest_chat = rest_chat.length > 0 ? rest_chat[0] : {};
+                if (clients[notify_to_user]) {
+                    let data_ = { "code": new_chat_message, "message": "new chat message", 'result': notification, chat: rest_chat }
+                    clients[notify_to_user].sendUTF(JSON.stringify(data_));
+                }
+            })
         }
 
         let total_shares = await SharesModel
@@ -2872,7 +2980,7 @@ async function ShareBlogToFriends(req, resp) {
                 ]
             })
             .countDocuments();
-        return resp.status(200).json({ "status": 200, "message": "Success", 'result': share, "blog": Blog, total_shares: total_shares, my_shares: my_shares });
+        return resp.status(200).json({ "status": 200, "message": "Success", 'result': 3, total_shares: total_shares, my_shares: my_shares });
     } catch (error) {
         return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
     }
