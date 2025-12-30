@@ -8,6 +8,9 @@ const ffmpegPath = require("ffmpeg-static");
 // register ffmpeg binary
 ffmpeg.setFfmpegPath(ffmpegPath);
 const APP_STORAGE = process.env.APP_STORAGE;
+const { Worker } = require("worker_threads");
+
+
 async function NodeJSStreams(req, resp) {
     try {
         let { watch } = req.query;
@@ -197,9 +200,37 @@ async function Videothumbnail(req, resp) {
         if (fs.existsSync(`${file_full_path_name}`)) {
             fs.unlinkSync(`${file_full_path_name}`);
         }
-        resp.status(200).json({ status: 200, thumbsbase64: thumbsbase64 });
+        return resp.status(200).json({ status: 200, thumbsbase64: thumbsbase64 });
     } catch (err) {
-        resp.status(500).json({ error: err.message });
+        return resp.status(500).json({ error: err.message });
     }
 }
-module.exports = { NodeJSStreams, NodeJSStreams_OLD, Videothumbnail };
+
+async function VideothumbnailNew(req, resp) {
+    /// 1->npm install fluent-ffmpeg
+    // 1->npm install ffmpeg-static
+    // 2->https://www.gyan.dev/ffmpeg/builds/,https://github.com/GyanD/codexffmpeg/releases/tag/2025-12-07-git-c4d22f2d2c
+    // 2.a->ffmpeg-2025-12-07-git-c4d22f2d2c-full_build.zip
+    // 2.b->Extract and copy bin folder path
+    // 2.c->Set Environment variable in system settings
+    // 3->Restart VS code or system
+    try {
+        let { watch = '', sec = 10 } = req.body;
+        const ThumbnailGenerator = new Worker(
+            path.join(__dirname, "VideoThumbnailGenerator.js"),
+            {
+                workerData: {
+                    reqbody: req.body, 
+                }
+            });
+        ThumbnailGenerator.on("message", (data) => {
+           return resp.status(200).json(data);
+        });
+        ThumbnailGenerator.on("error", (e) => {
+            throw new Error(e);
+        });
+    } catch (err) {
+       return resp.status(500).json({ error: err.message });
+    }
+}
+module.exports = { NodeJSStreams, NodeJSStreams_OLD, Videothumbnail,VideothumbnailNew };
