@@ -220,17 +220,165 @@ async function VideothumbnailNew(req, resp) {
             path.join(__dirname, "VideoThumbnailGenerator.js"),
             {
                 workerData: {
-                    reqbody: req.body, 
+                    reqbody: req.body,
                 }
             });
         ThumbnailGenerator.on("message", (data) => {
-           return resp.status(200).json(data);
+            return resp.status(200).json(data);
         });
         ThumbnailGenerator.on("error", (e) => {
             throw new Error(e);
         });
     } catch (err) {
-       return resp.status(500).json({ error: err.message });
+        return resp.status(500).json({ error: err.message });
     }
 }
-module.exports = { NodeJSStreams, NodeJSStreams_OLD, Videothumbnail,VideothumbnailNew };
+
+
+async function VideothumbnailV2(req, resp) {
+    /// 1->npm install fluent-ffmpeg
+    // 1->npm install ffmpeg-static
+    // 2->https://www.gyan.dev/ffmpeg/builds/,https://github.com/GyanD/codexffmpeg/releases/tag/2025-12-07-git-c4d22f2d2c
+    // 2.a->ffmpeg-2025-12-07-git-c4d22f2d2c-full_build.zip
+    // 2.b->Extract and copy bin folder path
+    // 2.c->Set Environment variable in system settings
+    // 3->Restart VS code or system
+    //http://10.188.163.53:5000/video-thumbnail-v2?watch=hWpoIVoUJwTWkQSR6lINsw%3D%3D
+    try {
+        let { watch = '' } = req.query;
+        let sec = 2, total = 0, data = {};
+        if (!sec) sec = 2;
+        if (!watch) resp.status(500).json({ "status": 500, "message": "blog id requird", "data": false });
+        watch = await Healper.data_decrypt(decodeURIComponent(watch)); //Healper.data_encrypt()
+        total = await BlogsModel.find({ 'content_alias': watch }).countDocuments();
+        if (total <= 0) return resp.status(500).json({ "status": 500, "message": "file not exists!!", "data": false });
+        data = await BlogsModel.findOne({ 'content_alias': watch });
+        let filepath = '', filedata = '', FileSize = 0, FileExists = false, FileType = '';
+        filepath = path.join(__dirname, `./../storage/user-blogs/${data.photo}`);
+        FileExists = await Healper.FileExists(filepath);
+        if (!FileExists) return resp.status(500).json({ "status": 500, "message": "file not exists!!", "data": false });
+        let file_name = `${data.photo}`;
+        let file_path = `${Healper.storageFolderPath()}user-blogs/${file_name}`;
+        let file_view_path = `${APP_STORAGE}user-blogs/video-thumbnails${data._id}/`;
+        const video = file_path;
+        const output = `${Healper.storageFolderPath()}user-blogs/video-thumbnails${data._id}/`;
+        let file_new_name = `${sec}.jpg`;
+
+        if (!fs.existsSync(output)) {
+            fs.mkdirSync(output, { recursive: true });
+        }
+        // STEP 1: thumbnails
+        await generateThumbnails(video, output);
+
+        // STEP 2: sprite
+        await generateSprite(output, data);
+
+
+        return resp.status(200).json({ status: 200, result: [] });
+    } catch (err) {
+        return resp.status(500).json({ error: err.message });
+    }
+}
+
+async function generateThumbnails(video, output) {
+    try {
+        await new Promise((resolve, reject) => {
+            ffmpeg(video)
+                .output(`${output}/thumb_%04d.jpg`)
+                .outputOptions([
+                    '-vf fps=1',       // 1 thumbnail per second
+                    // '-qscale:v 2'
+                ])
+                .on('end', resolve)
+                .on('error', reject)
+                .run();
+        });
+        return true;
+    } catch (error) {
+        throw new Error(error);
+    }
+}
+
+async function generateSprite(output, blog) {
+    try {
+        const
+            thumbWidth = 160,
+            thumbHeight = 90,
+            interval = 1,
+            spriteUrl = `${APP_STORAGE}user-blogs/video-thumbnails${blog._id}/sprite.jpg`;
+        ;
+        const thumbs = fs.readdirSync(output).filter(f => f.startsWith('thumb_'));
+        const count = thumbs.length;
+
+        const cols = Math.ceil(Math.sqrt(count));
+        const rows = Math.ceil(count / cols);
+        await new Promise((resolve, reject) => {
+            ffmpeg()
+                .input(`${output}/thumb_%04d.jpg`)
+                .inputOptions(['-framerate 1'])
+                .outputOptions([
+                    `-vf tile=${cols}x${rows}`,
+                    // '-qscale:v 2'
+                ])
+                .output(`${output}/sprite.jpg`)
+                .on('end', resolve)
+                .on('error', reject)
+                .run();
+        });
+        // Generate metadata
+        const frames = {};
+        for (let i = 0; i < count; i++) {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+
+            frames[i] = {
+                x: -(col * thumbWidth),
+                y: -(row * thumbHeight)
+            };
+        }
+
+        const metadata = {
+            thumbWidth,
+            thumbHeight,
+            interval,
+            columns: cols,
+            rows,
+            count,
+            spriteUrl,
+            frames
+        };
+        fs.writeFileSync(path.join(output, 'sprite.json'), JSON.stringify(metadata, null, 2));
+        return true;
+    } catch (error) {
+        throw new Error(error);
+    }
+}
+
+async function VideothumbnailMetaData(req, resp) {
+    try {
+        let { watch = '' } = req.body;
+        let sec = 2, total = 0, data = {};
+        if (!sec) sec = 2;
+        if (!watch) resp.status(200).json({ "status": 500, "message": "blog id requird", "data": false });
+        watch = await Healper.data_decrypt(decodeURIComponent(watch));
+        total = await BlogsModel.find({ 'content_alias': watch }).countDocuments();
+        if (total <= 0) return resp.status(200).json({ "status": 500, "message": "file not exists!!", "data": false });
+        data = await BlogsModel.findOne({ 'content_alias': watch });
+        const filepath = `${Healper.storageFolderPath()}user-blogs/video-thumbnails${data._id}/sprite.json`;
+        FileExists = await Healper.FileExists(filepath);
+        if (!FileExists) return resp.status(200).json({ "status": 500, "message": "file not exists!!", "result": {} });
+
+        const stream = fs.createReadStream(filepath, { encoding: 'utf8' });
+        stream.on('data', chunk => {
+            return resp.status(200).json({ status: 200, result: JSON.parse(chunk) });
+        });
+        stream.on('error', err => {
+            throw new Error(err);
+        });
+    } catch (err) {
+        return resp.status(500).json({ status: 500, message: err.message });
+    }
+}
+
+
+module.exports = { NodeJSStreams, NodeJSStreams_OLD, Videothumbnail, VideothumbnailNew, VideothumbnailV2, VideothumbnailMetaData };
