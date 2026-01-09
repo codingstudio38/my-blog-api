@@ -259,22 +259,31 @@ async function VideothumbnailV2(req, resp) {
         if (!FileExists) return resp.status(500).json({ "status": 500, "message": "file not exists!!", "data": false });
         let file_name = `${data.photo}`;
         let file_path = `${Healper.storageFolderPath()}user-blogs/${file_name}`;
-        let file_view_path = `${APP_STORAGE}user-blogs/video-thumbnails${data._id}/`;
+
         const video = file_path;
         const output = `${Healper.storageFolderPath()}user-blogs/video-thumbnails${data._id}/`;
-        let file_new_name = `${sec}.jpg`;
 
         if (!fs.existsSync(output)) {
             fs.mkdirSync(output, { recursive: true });
         }
         // STEP 1: thumbnails
-        await generateThumbnails(video, output);
+        await new Promise((resolve, reject) => {
+            ffmpeg(video)
+                .output(`${output}/thumb_%04d.jpg`)
+                .outputOptions([
+                    '-vf fps=1',       // 1 thumbnail per second
+                    // '-qscale:v 2'
+                ])
+                .on('end', resolve)
+                .on('error', reject)
+                .run();
+        });
 
         // STEP 2: sprite
-        await generateSprite(output, data);
+        const spritesheet = await generateSprite(video, output, data);
 
 
-        return resp.status(200).json({ status: 200, result: [] });
+        return resp.status(200).json({ status: 200, result: spritesheet });
     } catch (err) {
         return resp.status(500).json({ error: err.message });
     }
@@ -299,7 +308,7 @@ async function generateThumbnails(video, output) {
     }
 }
 
-async function generateSprite(output, blog) {
+async function generateSprite(video, output, blog) {
     try {
         const
             thumbWidth = 160,
@@ -307,20 +316,24 @@ async function generateSprite(output, blog) {
             interval = 1,
             spriteUrl = `${APP_STORAGE}user-blogs/video-thumbnails${blog._id}/sprite.jpg`;
         ;
-        const thumbs = fs.readdirSync(output).filter(f => f.startsWith('thumb_'));
+        // const thumbs = fs.readdirSync(output).filter(f => f.startsWith('thumb_'));
+        const thumbs = fs.readdirSync(output).filter(f => f.startsWith('thumb_') && f.endsWith('.jpg'));
+        if (!thumbs.length) {
+            throw new Error('No thumbnails found to generate sprite');
+        }
         const count = thumbs.length;
 
         const cols = Math.ceil(Math.sqrt(count));
         const rows = Math.ceil(count / cols);
         await new Promise((resolve, reject) => {
             ffmpeg()
-                .input(`${output}/thumb_%04d.jpg`)
+                .input(`${output}thumb_%04d.jpg`)
                 .inputOptions(['-framerate 1'])
                 .outputOptions([
                     `-vf tile=${cols}x${rows}`,
                     // '-qscale:v 2'
                 ])
-                .output(`${output}/sprite.jpg`)
+                .output(`${output}sprite.jpg`)
                 .on('end', resolve)
                 .on('error', reject)
                 .run();
@@ -348,7 +361,13 @@ async function generateSprite(output, blog) {
             frames
         };
         fs.writeFileSync(path.join(output, 'sprite.json'), JSON.stringify(metadata, null, 2));
-        return true;
+        thumbs.forEach((files) => {
+            let f = `${output}${files}`;
+            if (fs.existsSync(f)) {
+                fs.unlinkSync(f);
+            }
+        })
+        return metadata;
     } catch (error) {
         throw new Error(error);
     }
