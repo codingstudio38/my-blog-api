@@ -1235,7 +1235,7 @@ async function UpdateBlog(req, resp) {
             user_id: user_id,
             title: title,
             content: content,
-            content_alias: content_alias,
+            // content_alias: content_alias,
             updated_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
             blog_type: blog_type,
             sort_description: sort_description,
@@ -2688,7 +2688,7 @@ async function ShareBlog(req, resp) {
 
 async function ShareBlogToFriends(req, resp) {
     try {
-        let { user_id = '', blog_id = '', selected_user = [],text='' } = req.body;
+        let { user_id = '', blog_id = '', selected_user = [], text = '' } = req.body;
         if (!user_id) {
             return resp.status(200).json({ 'status': 400, 'message': 'user id required.' });
         }
@@ -2732,10 +2732,10 @@ async function ShareBlogToFriends(req, resp) {
         } else {
             main_blog = {};
         }
-        if(text==''){
-            text=`${from.name} send a post. ${blog.is_shared_blog ? main_blog.title : blog.title}`;
+        if (text == '') {
+            text = `${from.name} send a post. ${blog.is_shared_blog ? main_blog.title : blog.title}`;
         } else {
-            text=`${text}. ${blog.is_shared_blog ? main_blog.title : blog.title}`;
+            text = `${text}. ${blog.is_shared_blog ? main_blog.title : blog.title}`;
         }
         if (filter_firends_id.length > 0) {
             let intid = await UsersChatModel.find({ delete: 0 }).countDocuments();

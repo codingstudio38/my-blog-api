@@ -261,7 +261,7 @@ async function VideothumbnailV2(req, resp) {
         let file_path = `${Healper.storageFolderPath()}user-blogs/${file_name}`;
 
         const video = file_path;
-        const output = `${Healper.storageFolderPath()}user-blogs/video-thumbnails${data._id}/`;
+        const output = `${Healper.storageFolderPath()}user-blogs/video-thumbnails${data._id}`;
 
         if (!fs.existsSync(output)) {
             fs.mkdirSync(output, { recursive: true });
@@ -316,7 +316,6 @@ async function generateSprite(video, output, blog) {
             interval = 1,
             spriteUrl = `${APP_STORAGE}user-blogs/video-thumbnails${blog._id}/sprite.jpg`;
         ;
-        // const thumbs = fs.readdirSync(output).filter(f => f.startsWith('thumb_'));
         const thumbs = fs.readdirSync(output).filter(f => f.startsWith('thumb_') && f.endsWith('.jpg'));
         if (!thumbs.length) {
             throw new Error('No thumbnails found to generate sprite');
@@ -327,13 +326,17 @@ async function generateSprite(video, output, blog) {
         const rows = Math.ceil(count / cols);
         await new Promise((resolve, reject) => {
             ffmpeg()
-                .input(`${output}thumb_%04d.jpg`)
-                .inputOptions(['-framerate 1'])
+                .input(path.join(output, 'thumb_%04d.jpg'))
+                .inputOptions([
+                    '-pattern_type sequence',
+                    '-framerate 1'
+                ])
                 .outputOptions([
-                    `-vf tile=${cols}x${rows}`,
+                    `-vf scale=${thumbWidth}:${thumbHeight},tile=${cols}x${rows}`,
+                    '-frames:v 1'
                     // '-qscale:v 2'
                 ])
-                .output(`${output}sprite.jpg`)
+                .output(path.join(output, 'sprite.jpg'))
                 .on('end', resolve)
                 .on('error', reject)
                 .run();
@@ -362,7 +365,7 @@ async function generateSprite(video, output, blog) {
         };
         fs.writeFileSync(path.join(output, 'sprite.json'), JSON.stringify(metadata, null, 2));
         thumbs.forEach((files) => {
-            let f = `${output}${files}`;
+            let f = `${output}/${files}`;
             if (fs.existsSync(f)) {
                 fs.unlinkSync(f);
             }
@@ -387,13 +390,9 @@ async function VideothumbnailMetaData(req, resp) {
         FileExists = await Healper.FileExists(filepath);
         if (!FileExists) return resp.status(200).json({ "status": 500, "message": "file not exists!!", "result": {} });
 
-        const stream = fs.createReadStream(filepath, { encoding: 'utf8' });
-        stream.on('data', chunk => {
-            return resp.status(200).json({ status: 200, result: JSON.parse(chunk) });
-        });
-        stream.on('error', err => {
-            throw new Error(err);
-        });
+        const stream = await fs.readFileSync(filepath, 'utf8');
+        return resp.status(200).json({ status: 200, result: JSON.parse(stream) });
+
     } catch (err) {
         return resp.status(500).json({ status: 500, message: err.message });
     }
