@@ -280,7 +280,7 @@ async function VideothumbnailV2(req, resp) {
         });
 
         // STEP 2: sprite
-        const spritesheet = await generateSprite(video, output, data);
+        const spritesheet = await generateMultipleSprite(video, output, data);
 
 
         return resp.status(200).json({ status: 200, result: spritesheet });
@@ -376,6 +376,103 @@ async function generateSprite(video, output, blog) {
     }
 }
 
+async function generateMultipleSprite(video, output, blog) {
+    const thumbWidth = 160;
+    const thumbHeight = 90;
+    const interval = 1;
+    let THUMBS_PER_SPRITE = 100;
+    const COLS = 10;
+    const ROWS = 10;
+
+    const thumbs = fs
+        .readdirSync(output)
+        .filter(f => f.startsWith('thumb_') && f.endsWith('.jpg'))
+        .sort();
+    const count = thumbs.length;
+    if (!thumbs.length) {
+        throw new Error('No thumbnails found');
+    }
+    const sprites = [];
+    THUMBS_PER_SPRITE = thumbs.length >= THUMBS_PER_SPRITE ? THUMBS_PER_SPRITE : Math.ceil(thumbs.length);
+    const totalSprites = Math.ceil(thumbs.length / THUMBS_PER_SPRITE);
+    for (let s = 0; s < totalSprites; s++) {
+        const start = s * THUMBS_PER_SPRITE;
+        const end = start + THUMBS_PER_SPRITE;
+        const chunk = thumbs.slice(start, end);
+
+        // temp list file (ffmpeg concat trick)
+        const listFile = path.join(output, `list_${s}.txt`);
+        fs.writeFileSync(
+            listFile,
+            chunk.map(f => `file '${path.join(output, f)}'`).join('\n')
+        );
+        const spriteName = `sprite_${s}.jpg`;
+        await new Promise((resolve, reject) => {
+            ffmpeg()
+                .input(listFile)
+                .inputOptions(['-f concat', '-safe 0'])
+                .outputOptions([
+                    `-vf scale=${thumbWidth}:${thumbHeight},tile=${COLS}x${ROWS}`,
+                    '-frames:v 1',
+                    // '-qscale:v 2'
+                ])
+                .output(path.join(output, spriteName))
+                .on('end', resolve)
+                .on('error', reject)
+                .run();
+        });
+
+        fs.unlinkSync(listFile);
+
+
+        // ---- sprite frame metadata ----
+        let start_image = s === 0 ? 0 : (s * THUMBS_PER_SPRITE) + 1;
+        let end_image = (s + 1) * THUMBS_PER_SPRITE;
+        const frames = {};
+        for (let globalIndex = start_image; globalIndex <= end_image; globalIndex++) {
+            const localIndex = globalIndex - start_image;
+
+            const col = localIndex % COLS;
+            const row = Math.floor(localIndex / COLS);
+
+            frames[globalIndex] = {
+                x: -(col * thumbWidth),
+                y: -(row * thumbHeight)
+            };
+        }
+        sprites.push({
+            index: s,
+            start: start_image,
+            end: end_image,
+            frames: frames,
+            url: `${APP_STORAGE}user-blogs/video-thumbnails${blog._id}/${spriteName}`
+        });
+    }
+
+    // global metadata
+    const metadata = {
+        thumbWidth,
+        thumbHeight,
+        interval,
+        thumbsPerSprite: THUMBS_PER_SPRITE,
+        columns: COLS,
+        rows: ROWS,
+        totalSprites,
+        count,
+        sprites
+    };
+
+    fs.writeFileSync(
+        path.join(output, 'sprites.json'),
+        JSON.stringify(metadata, null, 2)
+    );
+
+    // cleanup thumbs
+    thumbs.forEach(f => fs.unlinkSync(path.join(output, f)));
+    return metadata;
+}
+
+
 async function VideothumbnailMetaData(req, resp) {
     try {
         let { watch = '' } = req.body;
@@ -386,7 +483,7 @@ async function VideothumbnailMetaData(req, resp) {
         total = await BlogsModel.find({ 'content_alias': watch }).countDocuments();
         if (total <= 0) return resp.status(200).json({ "status": 500, "message": "file not exists!!", "data": false });
         data = await BlogsModel.findOne({ 'content_alias': watch });
-        const filepath = `${Healper.storageFolderPath()}user-blogs/video-thumbnails${data._id}/sprite.json`;
+        const filepath = `${Healper.storageFolderPath()}user-blogs/video-thumbnails${data._id}/sprites.json`;
         FileExists = await Healper.FileExists(filepath);
         if (!FileExists) return resp.status(200).json({ "status": 500, "message": "file not exists!!", "result": {} });
 
