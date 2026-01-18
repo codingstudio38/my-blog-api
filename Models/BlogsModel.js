@@ -14,6 +14,7 @@ const BlogSchema = new mongooseConnect.Schema({
     is_shared_blog: { type: Boolean, required: false, default: false },
     shared_blog_id: { type: String, required: false, trim: true, default: '' },
     main_blog_user_id: { type: String, required: false, trim: true },
+    publish: { type: Boolean, required: false, default: false },
     is_archive: { type: Boolean, required: false, default: false },
     like: { type: Boolean, required: false, default: true },
     share: { type: Boolean, required: false, default: true },

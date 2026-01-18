@@ -598,6 +598,7 @@ async function Myblogs(req, resp) {
                     share_created_at: "$share_blog_detail.created_at",
                     my_total_notsharelike: 1,
                     my_total_notsharecomment: 1,
+                    publish: 1,
 
                 }
             }
@@ -669,6 +670,7 @@ async function Myblogs(req, resp) {
                     "share_thumbnail_dtl": thumbnail_dtl1,
                     "share_user_file_dtl": user_file_dtl1,
                     "share_file_dtl": file_dtl1,
+                    "publish": element.publish == undefined ? true : element.publish,
                 }
             })
         );

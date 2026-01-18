@@ -20,6 +20,7 @@ async function Allblogs(req, resp) {
             andConditions.push({ is_archive: is_archive == 1 ? true : false });
         }
         andConditions.push({ delete: 0 });
+        andConditions.push({ publish: true });
         let query = andConditions.length > 0 ? { $and: andConditions } : {};
 
         // user_id
