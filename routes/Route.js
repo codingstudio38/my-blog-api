@@ -10,6 +10,15 @@ const AllNotificationController = require("./../Controllers/AllNotificationContr
 const UsersFriendRequestController = require("./../Controllers/UsersFriendRequestController");
 const VideoPlayerController = require("./../Controllers/VideoPlayerController");
 const ChatController = require("./../Controllers/ChatController");
+const Healper = require('./../Controllers/Healper');
+// const { Server } = require("@tus/server");
+// const { FileStore } = require("@tus/file-store");
+// const tusServer = new Server({
+//     path: `${Healper.storageFolderPath()}uploads`,
+//     datastore: new FileStore({
+//         directory: `${Healper.storageFolderPath()}uploads`
+//     })
+// });
 routeapp.get('/', async (req, resp) => {
     return resp.status(200).json({ "status": 200, "message": "Success" });
 })
@@ -65,6 +74,8 @@ routeapp.post("/like-and-dislike-on-sharepost", Auth, Blogcontroller.LikeAndDisl
 routeapp.post("/comment-on-sharepost", Auth, Blogcontroller.CommentOnSharePost);
 routeapp.post("/update-blog-settings", Auth, Blogcontroller.UpdateBlogSetting);
 routeapp.post("/blog-share-list", Auth, Blogcontroller.ShareList);
+routeapp.post('/update-blog-publish-status', Auth, Blogcontroller.UpdateBlogPublishStatus)
+// routeapp.post('/upload-blog-video', tusServer.handle.bind(tusServer))
 routeapp.all(/.*/, async (req, res) => {
     res.status(404).json({ status: 404, message: "route not found..!!" });
 });

@@ -217,7 +217,7 @@ async function CreactBlog(req, resp) {
 async function Myblogs(req, resp) {
     try {
         let { limit = 5, page = 1 } = req.query;
-        let { title = '', user_id = '', blog_type = '', is_archive = '' } = req.body;
+        let { title = '', user_id = '', blog_type = '', is_archive = '', publish = '' } = req.body;
         let skip = 0;
         limit = parseInt(limit);
         page = parseInt(page);
@@ -236,6 +236,9 @@ async function Myblogs(req, resp) {
         if (is_archive !== '') {
             andConditions.push({ is_archive: is_archive == 1 ? true : false });
         }
+        // if (publish !== '') {
+        //     andConditions.push({ is_archive: publish == 1 ? true : false });
+        // }
         andConditions.push({ delete: 0 });
         let query = andConditions.length > 0 ? { $and: andConditions } : {};
         // let list = await BlogsModel
@@ -599,7 +602,6 @@ async function Myblogs(req, resp) {
                     my_total_notsharelike: 1,
                     my_total_notsharecomment: 1,
                     publish: 1,
-
                 }
             }
         ]);
@@ -3104,4 +3106,40 @@ async function ShareList(req, resp) {
     }
 }
 
-module.exports = { UplodePhoto, CreactBlog, Myblogs, BlogByid, DeleteBlogByid, UpdateBlog, BlogsCategoryList, UplodeThumbnail, BlogByAlias, LikeAndDislike, UserComment, Comment, CommentList, hideComments, UpdateBlogArchive, CommentOnSharePost, LikeAndDislikeOnSharePost, ShareBlog, UpdateBlogSetting, ShareList, ShareBlogToFriends };
+
+async function UpdateBlogPublishStatus(req, resp) {
+    try {
+        let { status = true, blog_id = '' } = req.body;
+
+        if (status == undefined) {
+            return resp.status(200).json({ 'status': 400, 'message': 'status required.' });
+        }
+        if (!blog_id) {
+            return resp.status(200).json({ 'status': 400, 'message': 'blog id required.' });
+        }
+
+        let update = {
+            publish: status,
+            updated_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+        };
+        data = await BlogsModel.findByIdAndUpdate(
+            { _id: new mongodb.ObjectId(blog_id) },
+            { $set: update },
+            { new: true, useFindAndModify: false }
+        );
+        return resp.status(200).json({ "status": 200, "message": "Success", 'result': data });
+    } catch (error) {
+        return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
+    }
+}
+async function UploadBlogVideo(req, resp) {
+    try {
+
+
+        return resp.status(200).json({ "status": 200, "message": "Success", 'result': 1 });
+    } catch (error) {
+        return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
+    }
+}
+
+module.exports = { UplodePhoto, CreactBlog, Myblogs, BlogByid, DeleteBlogByid, UpdateBlog, BlogsCategoryList, UplodeThumbnail, BlogByAlias, LikeAndDislike, UserComment, Comment, CommentList, hideComments, UpdateBlogArchive, CommentOnSharePost, LikeAndDislikeOnSharePost, ShareBlog, UpdateBlogSetting, ShareList, ShareBlogToFriends, UpdateBlogPublishStatus, UploadBlogVideo };
