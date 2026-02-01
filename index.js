@@ -52,34 +52,27 @@ try {
     // ⭐ GLOBAL ERROR HANDLER
     // ---------------------------
     app.use((err, req, res, next) => {
-        console.error(`Error (Worker ${process.pid}):`, err);
-
-        res.status(500).json({
-            status: 500,
-            message: err.message || "Internal Server Error",
-            data: ''
-        });
+        console.error(err.message || "Internal Server Error");
+        process.exit(1);
+        throw new Error(err.message || "Internal Server Error");
+        return res.status(500).json({ "status": 500, "message": err.message || "Internal Server Error", 'result': null });
     });
 
     // ---------------------------
     // ⭐ PROCESS-LEVEL ERROR HANDLERS
     // ---------------------------
     process.on("uncaughtException", (err, req, res, next) => {
-        // console.error("Uncaught Exception:", err);
-        res.status(500).json({
-            status: 500,
-            message: err.message || "Internal Server Error",
-            data: ''
-        });
+        console.error(err.message || "Internal Server Error");
+        process.exit(1);
+        throw new Error(err.message || "Internal Server Error");
+        return res.status(500).json({ "status": 500, "message": err.message || "Internal Server Error", 'result': null });
     });
 
     process.on("unhandledRejection", (err, req, res, next) => {
-        // console.error("Unhandled Promise Rejection:", err);
-        res.status(500).json({
-            status: 500,
-            message: err.message || "Internal Server Error",
-            data: ''
-        });
+        console.error(err.message || "Internal Server Error");
+        process.exit(1);
+        throw new Error(err.message || "Internal Server Error");
+        return res.status(500).json({ "status": 500, "message": err.message || "Internal Server Error", 'result': null });
     });
 
     app.listen(PORT, HOST, () => {
