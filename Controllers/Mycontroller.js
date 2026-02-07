@@ -1,15 +1,22 @@
-const mongodb = require('mongodb');
-const moment = require('moment-timezone');
-const mongoose = require('mongoose');
-const UsersModel = require('../Models/UsersModel');
-const Healper = require('./Healper');
-const bcrypt = require("bcrypt");
-const crypto = require('crypto');
-const path = require('path');
-const fs = require('fs');
+// import dotenv from "dotenv";
+// dotenv.config();
+import mongodb from "mongodb";
+import moment from "moment-timezone";
+import mongoose from "mongoose";
+import UsersModel from "../Models/UsersModel.js";
+import { PaginationData, generateRandomString, storageFolderPath, FileInfo, DeleteFile, FileExists, data_decrypt, data_encrypt } from "./Healper.js";
+import bcrypt from "bcrypt";
+import crypto from "crypto";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const APP_URL = process.env.APP_URL;
 const APP_STORAGE = process.env.APP_STORAGE;
-async function Users(req, resp) {
+export async function Users(req, resp) {
     try {
         let { limit = 5, page = 1 } = req.query;
         let { name = '' } = req.body;
@@ -36,7 +43,7 @@ async function Users(req, resp) {
         let data = {
             list: list,
             total: total,
-            pagination: Healper.PaginationData(list, total, limit, page)
+            pagination: PaginationData(list, total, limit, page)
         };
         return resp.status(200).json({ "status": 200, "message": "Success", 'result': data });
     } catch (error) {
@@ -44,7 +51,7 @@ async function Users(req, resp) {
     }
 }
 
-async function CreateUser(req, resp) {
+export async function CreateUser(req, resp) {
     try {
         let { name = '', phone = '', email = '', password = '' } = req.body;
         if (!name) {
@@ -88,7 +95,7 @@ async function CreateUser(req, resp) {
     }
 }
 
-async function UpdateUser(req, resp) {
+export async function UpdateUser(req, resp) {
     try {
         let {
             name = '',
@@ -163,11 +170,11 @@ async function UpdateUser(req, resp) {
     }
 }
 
-async function UpdateUserPhoto(req, resp) {
+export async function UpdateUserPhoto(req, resp) {
     try {
         let { userid = '' } = req.body;
         let fileIs = '', file_size = 0, file_name = '', file_type = '', file_new_name = '', file_mimetype = '', user_files = '', user_old_file_path = '';
-        user_files = `${Healper.storageFolderPath()}users`;
+        user_files = `${storageFolderPath()}users`;
         if (!userid) {
             return resp.status(200).json({ 'status': 400, 'message': 'id required.' });
         }
@@ -215,7 +222,7 @@ async function UpdateUserPhoto(req, resp) {
     }
 }
 
-async function Userlogin(req, resp) {
+export async function Userlogin(req, resp) {
     try {
         let { email = '', password = '' } = req.body;
         if (!email) {
@@ -259,7 +266,7 @@ async function Userlogin(req, resp) {
         return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
     }
 }
-async function UserLogout(req, resp) {
+export async function UserLogout(req, resp) {
     try {
         // req.user.tokens = req.user.tokens.filter((items, index) => {
         //     return items.token !== req.token;
@@ -272,13 +279,11 @@ async function UserLogout(req, resp) {
     }
 }
 
-
-
-async function CkeditorfileUpload(req, resp) {
+export async function CkeditorfileUpload(req, resp) {
     try {
         let { ckCsrfToken = '' } = req.body;
         let fileIs = '', file_size = 0, file_name = '', file_type = '', file_new_name = '', file_mimetype = '', user_files = '';
-        user_files = `${Healper.storageFolderPath()}ckeditor`;
+        user_files = `${storageFolderPath()}ckeditor`;
         if (!ckCsrfToken) {
             return resp.status(400).json({ 'status': 400, 'message': 'csrf token required.' });
         }
@@ -303,7 +308,7 @@ async function CkeditorfileUpload(req, resp) {
     }
 }
 
-async function UserByid(req, resp) {
+export async function UserByid(req, resp) {
     try {
         let { id = '' } = req.params;
         if (!id) {
@@ -314,9 +319,9 @@ async function UserByid(req, resp) {
         let obj = {};
         if (user !== null) {
             let file_name = `${user.photo}`;
-            let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+            let file_path = `${storageFolderPath()}users/${file_name}`;
             let file_view_path = `${APP_STORAGE}users/${file_name}`;
-            let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+            let file_dtl = await FileInfo(file_name, file_path, file_view_path);
             obj = {
                 "_id": user._id,
                 "wsstatus": user.wsstatus,
@@ -348,7 +353,7 @@ async function UserByid(req, resp) {
 }
 
 
-async function UpdateUserWsStatus(userid, Status) {
+export async function UpdateUserWsStatus(userid, Status) {
     try {
         if (userid == "") {
             console.log('ws user id required');
@@ -362,5 +367,3 @@ async function UpdateUserWsStatus(userid, Status) {
         return 0;
     }
 }
-
-module.exports = { Users, CreateUser, Userlogin, UpdateUser, UserLogout, UpdateUserPhoto, CkeditorfileUpload, UserByid, UpdateUserWsStatus };

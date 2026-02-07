@@ -1,33 +1,42 @@
-const BlogsModel = require('../Models/BlogsModel');
-const path = require('path');
-const fs = require('fs');
-const mongodb = require('mongodb');
-const Healper = require("./Healper");
-const ffmpeg = require("fluent-ffmpeg");
-const ffmpegPath = require("ffmpeg-static");
+// import dotenv from "dotenv";
+// dotenv.config();
+import BlogsModel from "../Models/BlogsModel.js";
+import path from "path";
+import fs from "fs";
+import mongodb from "mongodb";
+import { PaginationData, generateRandomString, storageFolderPath, FileInfo, DeleteFile, FileExists, data_decrypt, data_encrypt } from "./Healper.js";
+import ffmpeg from "fluent-ffmpeg";
+import ffmpegPath from "ffmpeg-static";
+import { Worker } from "worker_threads";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const APP_STORAGE = process.env.APP_STORAGE;
+
 // register ffmpeg binary
 ffmpeg.setFfmpegPath(ffmpegPath);
-const APP_STORAGE = process.env.APP_STORAGE;
-const { Worker } = require("worker_threads");
 
 
-async function NodeJSStreams(req, resp) {
+
+export async function NodeJSStreams(req, resp) {
     try {
         let { watch } = req.query;
         let total = 0, data = {};
         if (!watch) return resp.status(500).json({ "status": 500, "message": "video id required!", "data": false });
-        watch = await Healper.data_decrypt(decodeURIComponent(watch));
+        watch = await data_decrypt(decodeURIComponent(watch));
         total = await BlogsModel.find({ 'content_alias': watch }).countDocuments();
         if (total <= 0) return resp.status(500).json({ "status": 500, "message": "file not exists!!", "data": false });
         data = await BlogsModel.findOne({ 'content_alias': watch });
-        let filepath = '', filedata = '', FileSize = 0, FileExists = false, FileType = '';
-        filepath = `${Healper.storageFolderPath()}user-blogs/${data.photo}`;
-        FileExists = await Healper.FileExists(filepath);
-        if (!FileExists) return resp.status(500).json({ "status": 500, "message": "file not exists!!", "data": false });
+        let filepath = '', filedata = '', FileSize = 0, FileExists_ = false, FileType = '';
+        filepath = `${storageFolderPath()}user-blogs/${data.photo}`;
+        FileExists_ = await FileExists(filepath);
+        if (!FileExists_) return resp.status(500).json({ "status": 500, "message": "file not exists!!", "data": false });
         let file_name = `${data.photo}`;
-        let file_path = `${Healper.storageFolderPath()}user-blogs/${file_name}`;
+        let file_path = `${storageFolderPath()}user-blogs/${file_name}`;
         let file_view_path = `${APP_STORAGE}user-blogs/${file_name}`;
-        const getFileInfo = await Healper.FileInfo(file_name, file_path, file_view_path);
+        const getFileInfo = await FileInfo(file_name, file_path, file_view_path);
         FileSize = getFileInfo.filesize;
         FileType = getFileInfo.filetype;
         let range = req.headers.range;
@@ -55,24 +64,24 @@ async function NodeJSStreams(req, resp) {
     }
 }
 
-async function NodeJSStreams_OLD(req, resp) {
+export async function NodeJSStreams_OLD(req, resp) {
     try {
         let { watch } = req.query;
         let total = 0, data = {};
         if (!watch) return resp.status(500).json({ "status": 500, "message": "video id required!", "data": false });
 
-        watch = await Healper.data_decrypt(decodeURIComponent(watch)); //Healper.data_encrypt()
+        watch = await data_decrypt(decodeURIComponent(watch)); //data_encrypt()
         total = await BlogsModel.find({ 'content_alias': watch }).countDocuments();
         if (total <= 0) return resp.status(500).json({ "status": 500, "message": "file not exists!!", "data": false });
         data = await BlogsModel.findOne({ 'content_alias': watch });
-        let filepath = '', filedata = '', FileSize = 0, FileExists = false, FileType = '';
+        let filepath = '', filedata = '', FileSize = 0, FileExists_ = false, FileType = '';
         filepath = path.join(__dirname, `./../storage/user-blogs/${data.photo}`);
-        FileExists = await Healper.FileExists(filepath);
-        if (!FileExists) return resp.status(500).json({ "status": 500, "message": "file not exists!!", "data": false });
+        FileExists_ = await FileExists(filepath);
+        if (!FileExists_) return resp.status(500).json({ "status": 500, "message": "file not exists!!", "data": false });
         let file_name = `${data.photo}`;
-        let file_path = `${Healper.storageFolderPath()}user-blogs/${file_name}`;
+        let file_path = `${storageFolderPath()}user-blogs/${file_name}`;
         let file_view_path = `${APP_STORAGE}user-blogs/${file_name}`;
-        const getFileInfo = await Healper.FileInfo(file_name, file_path, file_view_path);
+        const getFileInfo = await FileInfo(file_name, file_path, file_view_path);
         FileSize = getFileInfo.filesize;
         FileType = getFileInfo.filetype;
         let range = req.headers.range;
@@ -88,7 +97,6 @@ async function NodeJSStreams_OLD(req, resp) {
             'Content-Length': contentLength,
             'Content-Type': 'video/mp4',
         };
-
         // Respond with the 206 Partial Content status
         resp.writeHead(206, headers);
         // Create a stream to read the video file chunk
@@ -96,10 +104,11 @@ async function NodeJSStreams_OLD(req, resp) {
         // Pipe the video stream to the response
         videoStream.pipe(resp);
     } catch (error) {
+        console.log(error.message);
         return resp.status(500).json({ "status": 500, "message": error.message, "data": false });
     }
 }
-async function Videothumbnail(req, resp) {
+export async function Videothumbnail(req, resp) {
     /// 1->npm install fluent-ffmpeg
     // 1->npm install ffmpeg-static
     // 2->https://www.gyan.dev/ffmpeg/builds/,https://github.com/GyanD/codexffmpeg/releases/tag/2025-12-07-git-c4d22f2d2c
@@ -112,19 +121,19 @@ async function Videothumbnail(req, resp) {
         let total = 0, data = {};
         if (!watch) return resp.status(500).json({ "status": 500, "message": "video id required!", "data": false });
         if (!sec) sec = 10;
-        watch = await Healper.data_decrypt(decodeURIComponent(watch)); //Healper.data_encrypt()
+        watch = await data_decrypt(decodeURIComponent(watch)); //data_encrypt()
         total = await BlogsModel.find({ 'content_alias': watch }).countDocuments();
         if (total <= 0) return resp.status(500).json({ "status": 500, "message": "file not exists!!", "data": false });
         data = await BlogsModel.findOne({ 'content_alias': watch });
-        let filepath = '', filedata = '', FileSize = 0, FileExists = false, FileType = '';
+        let filepath = '', filedata = '', FileSize = 0, FileExists_ = false, FileType = '';
         filepath = path.join(__dirname, `./../storage/user-blogs/${data.photo}`);
-        FileExists = await Healper.FileExists(filepath);
-        if (!FileExists) return resp.status(500).json({ "status": 500, "message": "file not exists!!", "data": false });
+        FileExists_ = await FileExists(filepath);
+        if (!FileExists_) return resp.status(500).json({ "status": 500, "message": "file not exists!!", "data": false });
         let file_name = `${data.photo}`;
-        let file_path = `${Healper.storageFolderPath()}user-blogs/${file_name}`;
+        let file_path = `${storageFolderPath()}user-blogs/${file_name}`;
         let file_view_path = `${APP_STORAGE}user-blogs/video-thumbnails${data._id}/`;
         const video = file_path;
-        const output = `${Healper.storageFolderPath()}user-blogs/video-thumbnails${data._id}/`;
+        const output = `${storageFolderPath()}user-blogs/video-thumbnails${data._id}/`;
         let file_new_name = `${sec}.jpg`;
         let file_full_path_name = `${output}${file_new_name}`;
         let file_full_view_name = `${file_view_path}${file_new_name}`;
@@ -206,7 +215,7 @@ async function Videothumbnail(req, resp) {
     }
 }
 
-async function VideothumbnailNew(req, resp) {
+export async function VideothumbnailNew(req, resp) {
     /// 1->npm install fluent-ffmpeg
     // 1->npm install ffmpeg-static
     // 2->https://www.gyan.dev/ffmpeg/builds/,https://github.com/GyanD/codexffmpeg/releases/tag/2025-12-07-git-c4d22f2d2c
@@ -235,7 +244,7 @@ async function VideothumbnailNew(req, resp) {
 }
 
 
-async function VideothumbnailV2(req, resp) {
+export async function VideothumbnailV2(req, resp) {
     /// 1->npm install fluent-ffmpeg
     // 1->npm install ffmpeg-static
     // 2->https://www.gyan.dev/ffmpeg/builds/,https://github.com/GyanD/codexffmpeg/releases/tag/2025-12-07-git-c4d22f2d2c
@@ -243,25 +252,25 @@ async function VideothumbnailV2(req, resp) {
     // 2.b->Extract and copy bin folder path
     // 2.c->Set Environment variable in system settings
     // 3->Restart VS code or system
-    //http://10.188.163.53:5000/video-thumbnail-v2?watch=hWpoIVoUJwTWkQSR6lINsw%3D%3D
+    //http://10.144.4.53:5000/video-thumbnail-v2?watch=HFsJIh%2BHvUGyRMqxujT00%2F%2BgvnZlX%2Fr%2Fiqc0Du4Fn%2Bw%3D
     try {
         let { watch = '' } = req.query;
         let sec = 2, total = 0, data = {};
         if (!sec) sec = 2;
         if (!watch) resp.status(500).json({ "status": 500, "message": "blog id requird", "data": false });
-        watch = await Healper.data_decrypt(decodeURIComponent(watch)); //Healper.data_encrypt()
+        watch = await data_decrypt(decodeURIComponent(watch)); //data_encrypt()
         total = await BlogsModel.find({ 'content_alias': watch }).countDocuments();
         if (total <= 0) return resp.status(500).json({ "status": 500, "message": "file not exists!!", "data": false });
         data = await BlogsModel.findOne({ 'content_alias': watch });
-        let filepath = '', filedata = '', FileSize = 0, FileExists = false, FileType = '';
+        let filepath = '', filedata = '', FileSize = 0, FileExists_ = false, FileType = '';
         filepath = path.join(__dirname, `./../storage/user-blogs/${data.photo}`);
-        FileExists = await Healper.FileExists(filepath);
-        if (!FileExists) return resp.status(500).json({ "status": 500, "message": "file not exists!!", "data": false });
+        FileExists_ = await FileExists(filepath);
+        if (!FileExists_) return resp.status(500).json({ "status": 500, "message": "file not exists!!", "data": false });
         let file_name = `${data.photo}`;
-        let file_path = `${Healper.storageFolderPath()}user-blogs/${file_name}`;
+        let file_path = `${storageFolderPath()}user-blogs/${file_name}`;
 
         const video = file_path;
-        const output = `${Healper.storageFolderPath()}user-blogs/video-thumbnails${data._id}`;
+        const output = `${storageFolderPath()}user-blogs/video-thumbnails${data._id}`;
 
         if (!fs.existsSync(output)) {
             fs.mkdirSync(output, { recursive: true });
@@ -289,7 +298,7 @@ async function VideothumbnailV2(req, resp) {
     }
 }
 
-async function generateThumbnails(video, output) {
+export async function generateThumbnails(video, output) {
     try {
         await new Promise((resolve, reject) => {
             ffmpeg(video)
@@ -308,7 +317,7 @@ async function generateThumbnails(video, output) {
     }
 }
 
-async function generateSprite(video, output, blog) {
+export async function generateSprite(video, output, blog) {
     try {
         const
             thumbWidth = 160,
@@ -376,7 +385,7 @@ async function generateSprite(video, output, blog) {
     }
 }
 
-async function generateMultipleSprite(video, output, blog) {
+export async function generateMultipleSprite(video, output, blog) {
     const thumbWidth = 160;
     const thumbHeight = 90;
     const interval = 1;
@@ -473,19 +482,19 @@ async function generateMultipleSprite(video, output, blog) {
 }
 
 
-async function VideothumbnailMetaData(req, resp) {
+export async function VideothumbnailMetaData(req, resp) {
     try {
         let { watch = '' } = req.body;
         let sec = 2, total = 0, data = {};
         if (!sec) sec = 2;
         if (!watch) resp.status(200).json({ "status": 500, "message": "blog id requird", "data": false });
-        watch = await Healper.data_decrypt(decodeURIComponent(watch));
+        watch = await data_decrypt(decodeURIComponent(watch));
         total = await BlogsModel.find({ 'content_alias': watch }).countDocuments();
         if (total <= 0) return resp.status(200).json({ "status": 500, "message": "file not exists!!", "data": false });
         data = await BlogsModel.findOne({ 'content_alias': watch });
-        const filepath = `${Healper.storageFolderPath()}user-blogs/video-thumbnails${data._id}/sprites.json`;
-        FileExists = await Healper.FileExists(filepath);
-        if (!FileExists) return resp.status(200).json({ "status": 500, "message": "file not exists!!", "result": {} });
+        const filepath = `${storageFolderPath()}user-blogs/video-thumbnails${data._id}/sprites.json`;
+        let FileExists_ = await FileExists(filepath);
+        if (!FileExists_) return resp.status(200).json({ "status": 500, "message": "file not exists!!", "result": {} });
 
         const stream = await fs.readFileSync(filepath, 'utf8');
         return resp.status(200).json({ status: 200, result: JSON.parse(stream) });
@@ -494,6 +503,3 @@ async function VideothumbnailMetaData(req, resp) {
         return resp.status(500).json({ status: 500, message: err.message });
     }
 }
-
-
-module.exports = { NodeJSStreams, NodeJSStreams_OLD, Videothumbnail, VideothumbnailNew, VideothumbnailV2, VideothumbnailMetaData };

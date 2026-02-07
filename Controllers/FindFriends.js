@@ -1,12 +1,17 @@
-const moment = require('moment-timezone');
-const UsersModel = require('../Models/UsersModel');
-const UsersFriendModel = require('../Models/UsersFriendModel');
-const UsersFriendRequestModel = require('../Models/UsersFriendRequestModel');
-const SharesModel = require('../Models/SharesModel');
-const Healper = require('./Healper');
-const mongodb = require('mongodb');
+// import dotenv from "dotenv";
+// dotenv.config();
+import moment from "moment-timezone";
+import mongodb from "mongodb";
+
+import UsersModel from "../Models/UsersModel.js";
+import UsersFriendModel from "../Models/UsersFriendModel.js";
+import UsersFriendRequestModel from "../Models/UsersFriendRequestModel.js";
+import SharesModel from "../Models/SharesModel.js";
+
+import { PaginationData, generateRandomString, storageFolderPath, FileInfo, DeleteFile, FileExists, data_decrypt, data_encrypt } from "./Healper.js";
+
 const APP_STORAGE = process.env.APP_STORAGE;
-async function AllUsers(req, resp) {
+export async function AllUsers(req, resp) {
     try {
         let { limit = 5, page = 1 } = req.query;
         let { title = '', user_id = '', listtype = 'not-friend' } = req.body;
@@ -284,9 +289,9 @@ async function AllUsers(req, resp) {
                 // let totalfriend = await user_friend_model.IsFriend(user_id, uid);
                 // let friend_request = await user_friend_request_model.checkFriendRequest(user_id, uid);
                 let file_name = element.photo;
-                let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+                let file_path = `${storageFolderPath()}users/${file_name}`;
                 let file_view_path = `${APP_STORAGE}users/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
                 return {
                     "_id": element._id,
                     "name": element.name,
@@ -319,7 +324,7 @@ async function AllUsers(req, resp) {
     }
 }
 
-async function MyFriends(req, resp) {
+export async function MyFriends(req, resp) {
     try {
         let { limit = 5, page = 1 } = req.query;
         let { name = '', user_id = '' } = req.body;
@@ -545,9 +550,9 @@ async function MyFriends(req, resp) {
         let resetdata_is = await Promise.all(
             list.map(async (element) => {
                 let file_name = element.photo;
-                let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+                let file_path = `${storageFolderPath()}users/${file_name}`;
                 let file_view_path = `${APP_STORAGE}users/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
                 return {
                     "_id": element._id,
                     "name": element.name,
@@ -583,7 +588,7 @@ async function MyFriends(req, resp) {
     }
 }
 
-async function FriendRequestSendList(req, resp) {
+export async function FriendRequestSendList(req, resp) {
     try {
         let { limit = 5, page = 1 } = req.query;
         let { title = '', user_id = '' } = req.body;
@@ -855,9 +860,9 @@ async function FriendRequestSendList(req, resp) {
                 // let totalfriend = await user_friend_model.IsFriend(user_id, uid);
                 // let friend_request = await user_friend_request_model.checkFriendRequest(user_id, uid);
                 let file_name = element.photo;
-                let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+                let file_path = `${storageFolderPath()}users/${file_name}`;
                 let file_view_path = `${APP_STORAGE}users/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
                 return {
                     "_id": element._id,
                     "name": element.name,
@@ -890,7 +895,7 @@ async function FriendRequestSendList(req, resp) {
     }
 }
 
-async function NewFriendRequestList(req, resp) {
+export async function NewFriendRequestList(req, resp) {
     try {
         let { limit = 5, page = 1 } = req.query;
         let { title = '', user_id = '' } = req.body;
@@ -1160,9 +1165,9 @@ async function NewFriendRequestList(req, resp) {
                 // let totalfriend = await user_friend_model.IsFriend(user_id, uid);
                 // let friend_request = await user_friend_request_model.checkFriendRequest(user_id, uid);
                 let file_name = element.photo;
-                let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+                let file_path = `${storageFolderPath()}users/${file_name}`;
                 let file_view_path = `${APP_STORAGE}users/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
                 return {
                     "_id": element._id,
                     "name": element.name,
@@ -1196,7 +1201,7 @@ async function NewFriendRequestList(req, resp) {
 }
 
 
-async function MyFriendsForShare(req, resp) {
+export async function MyFriendsForShare(req, resp) {
     try {
         let { limit = 5, page = 1 } = req.query;
         let { name = '', user_id = '', blog_id = '' } = req.body;
@@ -1422,9 +1427,9 @@ async function MyFriendsForShare(req, resp) {
         let resetdata_is = await Promise.all(
             list.map(async (element) => {
                 let file_name = element.photo;
-                let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+                let file_path = `${storageFolderPath()}users/${file_name}`;
                 let file_view_path = `${APP_STORAGE}users/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
                 return {
                     "_id": element._id,
                     "name": element.name,
@@ -1481,5 +1486,3 @@ async function MyFriendsForShare(req, resp) {
     }
 }
 
-
-module.exports = { AllUsers, MyFriends, FriendRequestSendList, NewFriendRequestList, MyFriendsForShare };

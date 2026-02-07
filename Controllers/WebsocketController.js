@@ -1,8 +1,11 @@
-const http = require("http");
-const webSocketServer = require("websocket").server;
+// import dotenv from "dotenv";
+// dotenv.config();
+import http from "http";
+import { server as webSocketServer } from "websocket";
 // const Mycontroller = require("./Mycontroller");
-const UsersModel = require("./../Models/UsersModel");
-const UsersFriendModel = require('../Models/UsersFriendModel');
+import UsersModel from "./../Models/UsersModel.js";
+import UsersFriendModel from "../Models/UsersFriendModel.js";
+
 const SOCKET_PORT = process.env.SOCKETPORT;
 const SOCKET_HOST = process.env.SOCKETHOST;
 const new_client = process.env.new_client;
@@ -11,9 +14,11 @@ const new_message_receive = process.env.new_message_receive;
 const receive_binary_data = process.env.receive_binary_data;
 
 const clients = {};
+
 function originIsAllowed(origin) {
     return true; // Add your logic to allow specific origins
 }
+
 const runWsServer = async () => {
     const serverForWs = http.createServer();
     serverForWs.listen(SOCKET_PORT, SOCKET_HOST, () => {
@@ -39,36 +44,32 @@ const runWsServer = async () => {
         const userID = request.resourceURL.query.Authorization;
         const connection = request.accept(null, request.origin);
         clients[userID] = connection;
-        const friend_model = new UsersFriendModel;
+
+        const friend_model = new UsersFriendModel();
         const myfriends = await friend_model.getAllMyFriendByid(userID);
 
-        // for (let key in clients) {
-        //     clients[key].sendUTF(JSON.stringify({
-        //         code: new_client,
-        //         msg: "New client connected..",
-        //         clientid: userID,
-        //         result: userID,
-        //     }));// Notify all clients of the new connection
-        // }
         let data = JSON.stringify({
             code: new_client,
             msg: "New client connected..",
             clientid: userID,
             result: userID,
         });
+
         if (myfriends.length > 0) {
             myfriends.forEach((element) => {
                 const to_user_id = element.to_user_id.toString();
                 if (clients[to_user_id]) {
                     clients[to_user_id].sendUTF(data);
                 }
-            })
+            });
         }
-        UpdateUserWsStatus(userID, 1);// update new connected user status
+
+        UpdateUserWsStatus(userID, 1);
 
         connection.on("message", function (message) {
             if (message.type === "utf8") {
                 let jsonpars = JSON.parse(message.utf8Data);
+
                 if (jsonpars?.code == 'send-offer') {
                     jsonpars = { ...jsonpars }
                     if (jsonpars.to) {
@@ -86,7 +87,10 @@ const runWsServer = async () => {
                     }
                 } else {
                     let data = {
-                        ...message, clientid: userID, code: new_message_receive, msg: "Received message.",
+                        ...message,
+                        clientid: userID,
+                        code: new_message_receive,
+                        msg: "Received message.",
                     };
                     for (let key in clients) {
                         clients[key].sendUTF(JSON.stringify(data));
@@ -94,10 +98,12 @@ const runWsServer = async () => {
                 }
             } else if (message.type === "binary") {
                 console.log("Received Binary Message of " + message.binaryData.length + " bytes");
-                // Broadcast binary message to all clients
 
                 let data = {
-                    ...message, clientid: userID, code: receive_binary_data, msg: "Received binary message.",
+                    ...message,
+                    clientid: userID,
+                    code: receive_binary_data,
+                    msg: "Received binary message.",
                 };
                 for (let key in clients) {
                     clients[key].sendBytes(data);
@@ -108,36 +114,26 @@ const runWsServer = async () => {
         connection.on("close", function (reasonCode, description) {
             console.log(new Date() + " Peer " + connection.remoteAddress + " disconnected.");
 
-            // if (clients[userID]) {
-            //     delete clients[userID];
-            // }
-            // // clients = clients.filter(num => num !== userID);
-            // // Notify all clients of the disconnection
-            // for (let key in clients) {
-            //     clients[key].sendUTF(JSON.stringify({
-            //         code: client_disconnected,
-            //         msg: "Client disconnected..",
-            //         clientid: userID,
-            //         result: userID,
-            //     }));
-            // }
             let data = JSON.stringify({
                 code: client_disconnected,
                 msg: "Client disconnected..",
                 clientid: userID,
                 result: userID,
             });
+
             if (myfriends.length > 0) {
                 myfriends.forEach((element) => {
                     const to_user_id = element.to_user_id.toString();
                     if (clients[to_user_id]) {
                         clients[to_user_id].sendUTF(data);
                     }
-                })
+                });
             }
-            UpdateUserWsStatus(userID, 0);// update disconnected user status
+
+            UpdateUserWsStatus(userID, 0);
         });
     });
+
     console.log(`WebSocket server listening on port ${SOCKET_PORT}`);
 };
 
@@ -148,11 +144,12 @@ async function UpdateUserWsStatus(userid, Status) {
             return 0;
         }
         await UsersModel.updateOne({ _id: userid }, { $set: { wsstatus: Status } });
-        console.log({ "status": 200, "message": "Success ws status updated" });//, "data": updateis 
+        console.log({ "status": 200, "message": "Success ws status updated" });
         return 1;
     } catch (error) {
-        console.log({ "status": 400, "message": "Failed to update ws status" });//, "error": error.message 
+        console.log({ "status": 400, "message": "Failed to update ws status" });
         return 0;
     }
 }
-module.exports = { runWsServer, clients };
+
+export { runWsServer, clients };

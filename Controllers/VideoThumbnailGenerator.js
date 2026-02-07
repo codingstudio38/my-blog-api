@@ -1,51 +1,75 @@
-const { parentPort, workerData } = require('worker_threads');
-const BlogsModel = require('../Models/BlogsModel');
-const Healper = require("./Healper");
-const path = require('path');
-const fs = require('fs');
-const ffmpeg = require("fluent-ffmpeg");
-const ffmpegPath = require("ffmpeg-static");
+// import dotenv from "dotenv";
+// dotenv.config();
+import { parentPort, workerData } from "worker_threads";
+import BlogsModel from "../Models/BlogsModel.js";
+import { PaginationData, generateRandomString, storageFolderPath, FileInfo, DeleteFile, FileExists, data_decrypt, data_encrypt } from "./Healper.js";
+import path from "path";
+import fs from "fs";
+import ffmpeg from "fluent-ffmpeg";
+import ffmpegPath from "ffmpeg-static";
+import { fileURLToPath } from "url";
+
 // register ffmpeg binary
 ffmpeg.setFfmpegPath(ffmpegPath);
+
 const APP_STORAGE = process.env.APP_STORAGE;
+
+// __dirname replacement for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function doHeavyWork(reqbody) {
     try {
-        let { watch = '', sec = 10 } = reqbody;
-        let total = 0, data = {};
-        if (!watch) return { "status": 500, "message": "video id required!", "data": false };
+        let { watch = "", sec = 10 } = reqbody;
+        let total = 0;
+        let data = {};
+
+        if (!watch) {
+            return { status: 500, message: "video id required!", data: false };
+        }
+
         if (!sec) sec = 10;
-        watch = await Healper.data_decrypt(decodeURIComponent(watch));
-        total = await BlogsModel.find({ 'content_alias': watch }).countDocuments();
-        if (total <= 0) return { "status": 500, "message": "file not exists!!", "data": false };
 
-        data = await BlogsModel.findOne({ 'content_alias': watch });
+        watch = await data_decrypt(decodeURIComponent(watch));
 
-        let filepath = '', filedata = '', FileSize = 0, FileExists = false, FileType = '';
-        filepath = path.join(__dirname, `./../storage/user-blogs/${data.photo}`);
-        FileExists = await Healper.FileExists(filepath);
-        if (!FileExists) return { "status": 500, "message": "file not exists!!", "data": false };
+        total = await BlogsModel.find({ content_alias: watch }).countDocuments();
+        if (total <= 0) {
+            return { status: 500, message: "file not exists!!", data: false };
+        }
 
-        let file_name = `${data.photo}`;
-        let file_path = `${Healper.storageFolderPath()}user-blogs/${file_name}`;
-        let file_view_path = `${APP_STORAGE}user-blogs/video-thumbnails${data._id}/`;
+        data = await BlogsModel.findOne({ content_alias: watch });
+
+        const filepath = path.join(
+            __dirname,
+            `../storage/user-blogs/${data.photo}`
+        );
+
+        const fileExists = await FileExists(filepath);
+        if (!fileExists) {
+            return { status: 500, message: "file not exists!!", data: false };
+        }
+
+        const file_name = data.photo;
+        const file_path = `${storageFolderPath()}user-blogs/${file_name}`;
+        const file_view_path = `${APP_STORAGE}user-blogs/video-thumbnails${data._id}/`;
 
         const video = file_path;
-        const output = `${Healper.storageFolderPath()}user-blogs/video-thumbnails${data._id}/`;
+        const output = `${storageFolderPath()}user-blogs/video-thumbnails${data._id}/`;
 
-        let file_new_name = `${sec}.jpg`;
-        let file_full_path_name = `${output}${file_new_name}`;
-        let file_full_view_name = `${file_view_path}${file_new_name}`;
+        const file_new_name = `${sec}.jpg`;
+        const file_full_path_name = `${output}${file_new_name}`;
+        const file_full_view_name = `${file_view_path}${file_new_name}`;
 
         if (!fs.existsSync(output)) {
             fs.mkdirSync(output, { recursive: true });
         }
 
-        // generate single image from video file
-        const thumlist = new Promise((resolve, reject) => {
-            if (fs.existsSync(`${file_full_path_name}`)) {
-                fs.unlinkSync(`${file_full_path_name}`);
+        // generate thumbnail
+        await new Promise((resolve, reject) => {
+            if (fs.existsSync(file_full_path_name)) {
+                fs.unlinkSync(file_full_path_name);
             }
+
             ffmpeg(video)
                 .screenshots({
                     count: 1,
@@ -53,41 +77,34 @@ async function doHeavyWork(reqbody) {
                     filename: file_new_name,
                     folder: output,
                 })
-                .on("end", () => {
-                    resolve({
-                        time: sec,
-                        thumbnail: file_full_view_name,
-                    });
-                })
-                .on("error", (err) => {
-                    reject(err)
-                });
+                .on("end", resolve)
+                .on("error", reject);
         });
-        let thumbs = {};
-        let thumbsbase64 = '';
-        // aftter generated image file get the image data
-        await thumlist.then(data => { thumbs = data; }).catch(err => { throw err; });
-        const mime = 'image/jpeg';
 
-        // convert in base64 data
-        const thuminbase64 = new Promise((resolve, reject) => {
+        const mime = "image/jpeg";
+
+        // convert to base64
+        const base64Data = await new Promise((resolve, reject) => {
             fs.readFile(file_full_path_name, (err, data) => {
-                if (err) reject(err);
-                if (data == undefined) { reject('File data is undefined'); }
+                if (err) return reject(err);
                 resolve(data.toString("base64"));
             });
         });
-        await thuminbase64.then(data => { thumbsbase64 = `data:${mime};base64,${data}`; }).catch(err => { throw err; });
 
-        // delete file after generate base64 data
-        if (fs.existsSync(`${file_full_path_name}`)) {
-            fs.unlinkSync(`${file_full_path_name}`);
+        // delete temp thumbnail
+        if (fs.existsSync(file_full_path_name)) {
+            fs.unlinkSync(file_full_path_name);
         }
-        return { status: 200, thumbsbase64: thumbsbase64 };
+
+        return {
+            status: 200,
+            thumbsbase64: `data:${mime};base64,${base64Data}`,
+        };
     } catch (error) {
-        return { status: 500, "message": error.message, "data": false};
-        // throw new Error(error);
-        // throw error;
+        return { status: 500, message: error.message, data: false };
     }
 }
-doHeavyWork(workerData.reqbody).then((data) => parentPort.postMessage(data)).catch((err) => parentPort.postMessage(err));
+
+doHeavyWork(workerData.reqbody)
+    .then((data) => parentPort.postMessage(data))
+    .catch((err) => parentPort.postMessage(err));

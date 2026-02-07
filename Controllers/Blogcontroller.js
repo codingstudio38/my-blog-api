@@ -1,21 +1,31 @@
-const mongodb = require('mongodb');
-const moment = require('moment-timezone');
-const mongoose = require('mongoose');
-const UsersModel = require('../Models/UsersModel');
-const UsersFriendModel = require('../Models/UsersFriendModel');
-const BlogsModel = require('../Models/BlogsModel');
-const BlogsCategoryModel = require('../Models/BlogCategoryModel');
-const AllNotificationsModel = require('../Models/AllNotificationsModel');
-const CommentsModel = require('../Models/CommentModel');
-const LikesModel = require('../Models/LikesModel');
-const SharesModel = require('../Models/SharesModel');
-const UsersChatModel = require('../Models/UsersChatModel');
-const { clients } = require("./WebsocketController");
-const Healper = require('./Healper');
-const bcrypt = require("bcrypt");
-const crypto = require('crypto');
-const path = require('path');
-const fs = require('fs');
+// import dotenv from "dotenv";
+// dotenv.config();
+import mongodb from "mongodb";
+import moment from "moment-timezone";
+import mongoose from "mongoose";
+
+import UsersModel from "../Models/UsersModel.js";
+import UsersFriendModel from "../Models/UsersFriendModel.js";
+import BlogsModel from "../Models/BlogsModel.js";
+import BlogsCategoryModel from "../Models/BlogCategoryModel.js";
+import AllNotificationsModel from "../Models/AllNotificationsModel.js";
+import CommentsModel from "../Models/CommentModel.js";
+import LikesModel from "../Models/LikesModel.js";
+import SharesModel from "../Models/SharesModel.js";
+import UsersChatModel from "../Models/UsersChatModel.js";
+
+import { clients } from "./WebsocketController.js";
+import { PaginationData, generateRandomString, storageFolderPath, FileInfo, DeleteFile, FileExists, data_decrypt, data_encrypt } from "./Healper.js";
+
+import bcrypt from "bcrypt";
+import crypto from "crypto";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const APP_URL = process.env.APP_URL;
 const APP_STORAGE = process.env.APP_STORAGE;
 const blog_post_status = process.env.blog_post_status;
@@ -23,11 +33,11 @@ const new_comment = process.env.new_comment;
 const new_like = process.env.new_like;
 const new_share = process.env.new_share;
 const new_chat_message = process.env.new_chat_message;
-async function UplodePhoto(req, resp) {
+export async function UplodePhoto(req, resp) {
     try {
         let { userid = '' } = req.body;
         let fileIs = '', file_size = 0, file_name = '', file_type = '', file_new_name = '', file_mimetype = '', blog_file_path = '';
-        blog_file_path = `${Healper.storageFolderPath()}user-blogs/temp/user${userid}`;
+        blog_file_path = `${storageFolderPath()}user-blogs/temp/user${userid}`;
         if (!userid) {
             return resp.status(200).json({ 'status': 400, 'message': 'user id required.' });
         }
@@ -56,11 +66,11 @@ async function UplodePhoto(req, resp) {
     }
 }
 
-async function UplodeThumbnail(req, resp) {
+export async function UplodeThumbnail(req, resp) {
     try {
         let { userid = '' } = req.body;
         let fileIs = '', file_size = 0, file_name = '', file_type = '', file_new_name = '', file_mimetype = '', blog_file_path = '';
-        blog_file_path = `${Healper.storageFolderPath()}user-blogs/temp/user-blogs-thumbnail/user${userid}`;
+        blog_file_path = `${storageFolderPath()}user-blogs/temp/user-blogs-thumbnail/user${userid}`;
         if (!userid) {
             return resp.status(200).json({ 'status': 400, 'message': 'user id required.' });
         }
@@ -90,12 +100,12 @@ async function UplodeThumbnail(req, resp) {
 }
 
 
-async function CreactBlog(req, resp) {
+export async function CreactBlog(req, resp) {
     try {
         let { user_id = '', title = '', content = '', photo = '', sort_description = '', blog_type = '', thumbnail = '', like = true, share = true, comment = true } = req.body;
         let content_alias = '',
-            blog_file_path = `${Healper.storageFolderPath()}user-blogs/temp/user${user_id}/${photo}`,
-            new_blog_file_path = `${Healper.storageFolderPath()}user-blogs/${photo}`;
+            blog_file_path = `${storageFolderPath()}user-blogs/temp/user${user_id}/${photo}`,
+            new_blog_file_path = `${storageFolderPath()}user-blogs/${photo}`;
         if (!user_id) {
             return resp.status(200).json({ 'status': 400, 'message': 'user id required.' });
         }
@@ -122,12 +132,12 @@ async function CreactBlog(req, resp) {
             thumbnail = '';
         }
         content_alias = title.trim().replaceAll(" ", "-");
-        content_alias = `${content_alias}-${Healper.generateRandomString(6)}`;
+        content_alias = `${content_alias}-${generateRandomString(6)}`;
         if (!fs.existsSync(`${new_blog_file_path}`)) {
             if (!fs.existsSync(`${blog_file_path}`)) {
                 return resp.status(200).json({ 'status': 400, 'message': 'file not found required.' });
             }
-            const p_path = `${Healper.storageFolderPath()}user-blogs`;
+            const p_path = `${storageFolderPath()}user-blogs`;
             if (!fs.existsSync(p_path)) {
                 fs.mkdirSync(p_path, { recursive: true });
             }
@@ -157,9 +167,9 @@ async function CreactBlog(req, resp) {
             data['thumbnail'] = '';
         }
         if (thumbnail !== '') {
-            let thumbnail_file_path = `${Healper.storageFolderPath()}user-blogs/temp/user-blogs-thumbnail/user${user_id}/${thumbnail}`;
-            let new_thumbnail_file_path = `${Healper.storageFolderPath()}user-blogs/thumbnail/${thumbnail}`;
-            const t_path = `${Healper.storageFolderPath()}user-blogs/thumbnail`;
+            let thumbnail_file_path = `${storageFolderPath()}user-blogs/temp/user-blogs-thumbnail/user${user_id}/${thumbnail}`;
+            let new_thumbnail_file_path = `${storageFolderPath()}user-blogs/thumbnail/${thumbnail}`;
+            const t_path = `${storageFolderPath()}user-blogs/thumbnail`;
             if (!fs.existsSync(new_thumbnail_file_path)) {
                 if (!fs.existsSync(t_path)) {
                     fs.mkdirSync(t_path, { recursive: true });
@@ -214,7 +224,7 @@ async function CreactBlog(req, resp) {
 
 
 
-async function Myblogs(req, resp) {
+export async function Myblogs(req, resp) {
     try {
         let { limit = 5, page = 1 } = req.query;
         let { title = '', user_id = '', blog_type = '', is_archive = '', publish = '' } = req.body;
@@ -612,34 +622,34 @@ async function Myblogs(req, resp) {
         let resetdata_is = await Promise.all(
             list.map(async element => {
                 let file_name = `${element.photo}`;
-                let file_path = `${Healper.storageFolderPath()}user-blogs/${file_name}`;
+                let file_path = `${storageFolderPath()}user-blogs/${file_name}`;
                 let file_view_path = `${APP_STORAGE}user-blogs/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
                 let user_file_name = `${element.user_photo}`;
-                let user_file_path = `${Healper.storageFolderPath()}users/${user_file_name}`;
+                let user_file_path = `${storageFolderPath()}users/${user_file_name}`;
                 let user_file_view_path = `${APP_STORAGE}users/${user_file_name}`;
-                let user_file_dtl = await Healper.FileInfo(user_file_name, user_file_path, user_file_view_path);
+                let user_file_dtl = await FileInfo(user_file_name, user_file_path, user_file_view_path);
 
                 let thumbnail_name = `${element.thumbnail}`;
-                let thumbnail_path = `${Healper.storageFolderPath()}user-blogs/thumbnail/${thumbnail_name}`;
+                let thumbnail_path = `${storageFolderPath()}user-blogs/thumbnail/${thumbnail_name}`;
                 let thumbnail_view_path = `${APP_STORAGE}user-blogs/thumbnail/${thumbnail_name}`;
-                let thumbnail_dtl = await Healper.FileInfo(thumbnail_name, thumbnail_path, thumbnail_view_path);
+                let thumbnail_dtl = await FileInfo(thumbnail_name, thumbnail_path, thumbnail_view_path);
 
                 let file_name1 = `${element.share_photo}`;
-                let file_path1 = `${Healper.storageFolderPath()}user-blogs/${file_name1}`;
+                let file_path1 = `${storageFolderPath()}user-blogs/${file_name1}`;
                 let file_view_path1 = `${APP_STORAGE}user-blogs/${file_name1}`;
-                let file_dtl1 = await Healper.FileInfo(file_name1, file_path1, file_view_path1);
+                let file_dtl1 = await FileInfo(file_name1, file_path1, file_view_path1);
 
                 let user_file_name1 = `${element.share_user_photo}`;
-                let user_file_path1 = `${Healper.storageFolderPath()}users/${user_file_name1}`;
+                let user_file_path1 = `${storageFolderPath()}users/${user_file_name1}`;
                 let user_file_view_path1 = `${APP_STORAGE}users/${user_file_name1}`;
-                let user_file_dtl1 = await Healper.FileInfo(user_file_name1, user_file_path1, user_file_view_path1);
+                let user_file_dtl1 = await FileInfo(user_file_name1, user_file_path1, user_file_view_path1);
 
                 let thumbnail_name1 = `${element.share_thumbnail}`;
-                let thumbnail_path1 = `${Healper.storageFolderPath()}user-blogs/thumbnail/${thumbnail_name1}`;
+                let thumbnail_path1 = `${storageFolderPath()}user-blogs/thumbnail/${thumbnail_name1}`;
                 let thumbnail_view_path1 = `${APP_STORAGE}user-blogs/thumbnail/${thumbnail_name1}`;
-                let thumbnail_dtl1 = await Healper.FileInfo(thumbnail_name1, thumbnail_path1, thumbnail_view_path1);
+                let thumbnail_dtl1 = await FileInfo(thumbnail_name1, thumbnail_path1, thumbnail_view_path1);
 
                 return {
                     ...element,
@@ -685,7 +695,7 @@ async function Myblogs(req, resp) {
         let data = {
             list: resetdata_is,
             total: total,
-            pagination: Healper.PaginationData(resetdata_is, total, limit, page)
+            pagination: PaginationData(resetdata_is, total, limit, page)
         };
         return resp.status(200).json({ "status": 200, "message": "Success", 'result': data });
     } catch (error) {
@@ -694,7 +704,7 @@ async function Myblogs(req, resp) {
 }
 
 
-async function BlogByid(req, resp) {
+export async function BlogByid(req, resp) {
     try {
         let { id = '' } = req.params;
         if (!id) {
@@ -705,14 +715,14 @@ async function BlogByid(req, resp) {
         let obj = {};
         if (blog !== null) {
             let file_name = `${blog.photo}`;
-            let file_path = `${Healper.storageFolderPath()}user-blogs/${file_name}`;
+            let file_path = `${storageFolderPath()}user-blogs/${file_name}`;
             let file_view_path = `${APP_STORAGE}user-blogs/${file_name}`;
-            let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+            let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
             let thumbnail_name = `${blog.thumbnail}`;
-            let thumbnail_path = `${Healper.storageFolderPath()}user-blogs/thumbnail/${thumbnail_name}`;
+            let thumbnail_path = `${storageFolderPath()}user-blogs/thumbnail/${thumbnail_name}`;
             let thumbnail_view_path = `${APP_STORAGE}user-blogs/thumbnail/${thumbnail_name}`;
-            let thumbnail_dtl = await Healper.FileInfo(thumbnail_name, thumbnail_path, thumbnail_view_path);
+            let thumbnail_dtl = await FileInfo(thumbnail_name, thumbnail_path, thumbnail_view_path);
 
             obj = {
                 ...blog._doc,
@@ -745,7 +755,7 @@ async function BlogByid(req, resp) {
     }
 }
 
-async function BlogByAlias(req, resp) {
+export async function BlogByAlias(req, resp) {
     try {
         let { id = '' } = req.params;
         let { user_id = '' } = req.body;
@@ -1107,41 +1117,40 @@ async function BlogByAlias(req, resp) {
                     share_created_at: "$share_blog_detail.created_at",
                     my_total_notsharelike: 1,
                     my_total_notsharecomment: 1,
-
                 }
             }
         ]);
         let blogs = await Promise.all(
             list.map(async (element) => {
                 let file_name = `${element.photo}`;
-                let file_path = `${Healper.storageFolderPath()}user-blogs/${file_name}`;
+                let file_path = `${storageFolderPath()}user-blogs/${file_name}`;
                 let file_view_path = `${APP_STORAGE}user-blogs/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
                 let user_file_name = `${element.user_photo}`;
-                let user_file_path = `${Healper.storageFolderPath()}users/${user_file_name}`;
+                let user_file_path = `${storageFolderPath()}users/${user_file_name}`;
                 let user_file_view_path = `${APP_STORAGE}users/${user_file_name}`;
-                let user_file_dtl = await Healper.FileInfo(user_file_name, user_file_path, user_file_view_path);
+                let user_file_dtl = await FileInfo(user_file_name, user_file_path, user_file_view_path);
 
                 let thumbnail_name = `${element.thumbnail}`;
-                let thumbnail_path = `${Healper.storageFolderPath()}user-blogs/thumbnail/${thumbnail_name}`;
+                let thumbnail_path = `${storageFolderPath()}user-blogs/thumbnail/${thumbnail_name}`;
                 let thumbnail_view_path = `${APP_STORAGE}user-blogs/thumbnail/${thumbnail_name}`;
-                let thumbnail_dtl = await Healper.FileInfo(thumbnail_name, thumbnail_path, thumbnail_view_path);
+                let thumbnail_dtl = await FileInfo(thumbnail_name, thumbnail_path, thumbnail_view_path);
 
                 let file_name1 = `${element.share_photo}`;
-                let file_path1 = `${Healper.storageFolderPath()}user-blogs/${file_name1}`;
+                let file_path1 = `${storageFolderPath()}user-blogs/${file_name1}`;
                 let file_view_path1 = `${APP_STORAGE}user-blogs/${file_name1}`;
-                let file_dtl1 = await Healper.FileInfo(file_name1, file_path1, file_view_path1);
+                let file_dtl1 = await FileInfo(file_name1, file_path1, file_view_path1);
 
                 let user_file_name1 = `${element.share_user_photo}`;
-                let user_file_path1 = `${Healper.storageFolderPath()}users/${user_file_name1}`;
+                let user_file_path1 = `${storageFolderPath()}users/${user_file_name1}`;
                 let user_file_view_path1 = `${APP_STORAGE}users/${user_file_name1}`;
-                let user_file_dtl1 = await Healper.FileInfo(user_file_name1, user_file_path1, user_file_view_path1);
+                let user_file_dtl1 = await FileInfo(user_file_name1, user_file_path1, user_file_view_path1);
 
                 let thumbnail_name1 = `${element.share_thumbnail}`;
-                let thumbnail_path1 = `${Healper.storageFolderPath()}user-blogs/thumbnail/${thumbnail_name1}`;
+                let thumbnail_path1 = `${storageFolderPath()}user-blogs/thumbnail/${thumbnail_name1}`;
                 let thumbnail_view_path1 = `${APP_STORAGE}user-blogs/thumbnail/${thumbnail_name1}`;
-                let thumbnail_dtl1 = await Healper.FileInfo(thumbnail_name1, thumbnail_path1, thumbnail_view_path1);
+                let thumbnail_dtl1 = await FileInfo(thumbnail_name1, thumbnail_path1, thumbnail_view_path1);
 
                 return {
                     ...element,
@@ -1188,7 +1197,7 @@ async function BlogByAlias(req, resp) {
     }
 }
 
-async function DeleteBlogByid(req, resp) {
+export async function DeleteBlogByid(req, resp) {
     try {
         let { id = '' } = req.params;
         if (!id) {
@@ -1200,12 +1209,12 @@ async function DeleteBlogByid(req, resp) {
         return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
     }
 }
-async function UpdateBlog(req, resp) {
+export async function UpdateBlog(req, resp) {
     try {
         let { id = '', user_id = '', title = '', content = '', photo = '', sort_description = '', blog_type = '', thumbnail = '', like = true, share = true, comment = true } = req.body;
         let content_alias = '',
-            blog_file_path = `${Healper.storageFolderPath()}user-blogs/temp/user${user_id}/${photo}`,
-            new_blog_file_path = `${Healper.storageFolderPath()}user-blogs/${photo}`;
+            blog_file_path = `${storageFolderPath()}user-blogs/temp/user${user_id}/${photo}`,
+            new_blog_file_path = `${storageFolderPath()}user-blogs/${photo}`;
         if (!id) {
             return resp.status(200).json({ 'status': 400, 'message': 'id required.' });
         }
@@ -1234,7 +1243,7 @@ async function UpdateBlog(req, resp) {
         let bmodel = new BlogsModel();
         let blogis = await bmodel.findByBlogId(id);
         content_alias = title.trim().replaceAll(" ", "-");
-        content_alias = `${content_alias}-${Healper.generateRandomString(6)}`;
+        content_alias = `${content_alias}-${generateRandomString(6)}`;
         let update = {
             user_id: user_id,
             title: title,
@@ -1248,11 +1257,11 @@ async function UpdateBlog(req, resp) {
             comment: comment,
         };
 
-        let thumbnail_file_path = `${Healper.storageFolderPath()}user-blogs/temp/user-blogs-thumbnail/user${user_id}/${thumbnail}`;
-        let new_thumbnail_file_path = `${Healper.storageFolderPath()}user-blogs/thumbnail/${thumbnail}`;
+        let thumbnail_file_path = `${storageFolderPath()}user-blogs/temp/user-blogs-thumbnail/user${user_id}/${thumbnail}`;
+        let new_thumbnail_file_path = `${storageFolderPath()}user-blogs/thumbnail/${thumbnail}`;
 
         if (thumbnail !== '') {
-            const t_path = `${Healper.storageFolderPath()}user-blogs/thumbnail`;
+            const t_path = `${storageFolderPath()}user-blogs/thumbnail`;
             if (!fs.existsSync(new_thumbnail_file_path)) {
                 if (!fs.existsSync(t_path)) {
                     fs.mkdirSync(t_path, { recursive: true });
@@ -1277,7 +1286,7 @@ async function UpdateBlog(req, resp) {
         }
 
         if (photo !== "") {
-            const p_path = `${Healper.storageFolderPath()}user-blogs`;
+            const p_path = `${storageFolderPath()}user-blogs`;
             if (!fs.existsSync(new_blog_file_path)) {
                 if (!fs.existsSync(p_path)) {
                     fs.mkdirSync(p_path, { recursive: true });
@@ -1302,13 +1311,13 @@ async function UpdateBlog(req, resp) {
 
 
         if (photo !== "" && fs.existsSync(`${new_blog_file_path}`)) {
-            const old_file = `${Healper.storageFolderPath()}user-blogs/${blogis.photo}`;
+            const old_file = `${storageFolderPath()}user-blogs/${blogis.photo}`;
             if (fs.existsSync(`${old_file}`)) {
                 fs.unlinkSync(`${old_file}`);
             }
         }
         if (thumbnail !== "" && fs.existsSync(`${new_thumbnail_file_path}`)) {
-            const old_file = `${Healper.storageFolderPath()}user-blogs/thumbnail/${blogis.thumbnail}`;
+            const old_file = `${storageFolderPath()}user-blogs/thumbnail/${blogis.thumbnail}`;
             if (fs.existsSync(`${old_file}`)) {
                 fs.unlinkSync(`${old_file}`);
             }
@@ -1319,7 +1328,7 @@ async function UpdateBlog(req, resp) {
     }
 }
 
-async function BlogsCategoryList(req, resp) {
+export async function BlogsCategoryList(req, resp) {
     try {
         let { name = '' } = req.body;
         let andConditions = [];
@@ -1340,7 +1349,7 @@ async function BlogsCategoryList(req, resp) {
     }
 }
 
-async function LikeAndDislike(req, resp) {
+export async function LikeAndDislike(req, resp) {
     try {
         let { user_id = '', blog_id = '', status = 0, blog_post_by = '' } = req.body;
 
@@ -1448,14 +1457,14 @@ async function LikeAndDislike(req, resp) {
                 let notification = new AllNotificationsModel(obj);
                 notification = await notification.save();
                 let file_name = from.photo;
-                let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+                let file_path = `${storageFolderPath()}users/${file_name}`;
                 let file_view_path = `${APP_STORAGE}users/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
                 let to_file_name = to.photo;
-                let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
+                let to_file_path = `${storageFolderPath()}users/${to_file_name}`;
                 let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
-                let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
+                let to_file_dtl = await FileInfo(to_file_name, to_file_path, to_file_view_path);
                 let reset_notification = {
                     ...notification._doc,
                     to_user_file_view_path: to_file_dtl.file_view_path,
@@ -1511,7 +1520,7 @@ async function LikeAndDislike(req, resp) {
     }
 }
 
-async function Comment(req, resp) {
+export async function Comment(req, resp) {
     try {
         let { user_id = '', blog_id = '', status = 0, comment = '', comment_id = '', blog_post_by = '' } = req.body;
 
@@ -1584,14 +1593,14 @@ async function Comment(req, resp) {
                 let notification = new AllNotificationsModel(obj);
                 notification = await notification.save();
                 let file_name = from.photo;
-                let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+                let file_path = `${storageFolderPath()}users/${file_name}`;
                 let file_view_path = `${APP_STORAGE}users/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
                 let to_file_name = to.photo;
-                let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
+                let to_file_path = `${storageFolderPath()}users/${to_file_name}`;
                 let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
-                let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
+                let to_file_dtl = await FileInfo(to_file_name, to_file_path, to_file_view_path);
                 let reset_notification = {
                     ...notification._doc,
                     to_user_file_view_path: to_file_dtl.file_view_path,
@@ -1638,9 +1647,9 @@ async function Comment(req, resp) {
             let user = new UsersModel();
             user = await user.findByUserId(user_id);
             let file_name = user.photo;
-            let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+            let file_path = `${storageFolderPath()}users/${file_name}`;
             let file_view_path = `${APP_STORAGE}users/${file_name}`;
-            let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+            let file_dtl = await FileInfo(file_name, file_path, file_view_path);
             insert_data = {
                 ...insert_data._doc,
                 "shared_by_id": insert_data._doc.shared_by_id,
@@ -1707,7 +1716,7 @@ async function Comment(req, resp) {
     }
 }
 
-async function UserComment(req, resp) {
+export async function UserComment(req, resp) {
     try {
         let { user_id = '', blog_id = '' } = req.body;
 
@@ -1733,7 +1742,7 @@ async function UserComment(req, resp) {
     }
 }
 
-async function CommentList(req, resp) {
+export async function CommentList(req, resp) {
     try {
         let { limit = 5, page = 1 } = req.query;
         let { blog_id = '', user_id = '', shared_blog_id = '' } = req.body;
@@ -1842,14 +1851,14 @@ async function CommentList(req, resp) {
         let resetdata_is = await Promise.all(
             list.map(async (element) => {
                 let file_name = element.user_photo;
-                let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+                let file_path = `${storageFolderPath()}users/${file_name}`;
                 let file_view_path = `${APP_STORAGE}users/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
                 let file_name1 = element.shared_user_photo;
-                let file_path1 = `${Healper.storageFolderPath()}users/${file_name1}`;
+                let file_path1 = `${storageFolderPath()}users/${file_name1}`;
                 let file_view_path1 = `${APP_STORAGE}users/${file_name1}`;
-                let file_dtl1 = await Healper.FileInfo(file_name1, file_path1, file_view_path1);
+                let file_dtl1 = await FileInfo(file_name1, file_path1, file_view_path1);
 
                 return {
                     ...element,
@@ -1868,7 +1877,7 @@ async function CommentList(req, resp) {
                 }
             })
         );
-        let result = Healper.PaginationData(resetdata_is, total, limit, page);
+        let result = PaginationData(resetdata_is, total, limit, page);
         let mytotal = await CommentsModel
             .find({
                 $and: [
@@ -1909,7 +1918,7 @@ async function CommentList(req, resp) {
     }
 }
 
-async function hideComments(req, resp) {
+export async function hideComments(req, resp) {
     try {
         let { user_id = '', comment_id = '', blog_id = '' } = req.body;
 
@@ -1988,7 +1997,7 @@ async function hideComments(req, resp) {
 }
 
 
-async function UpdateBlogArchive(req, resp) {
+export async function UpdateBlogArchive(req, resp) {
     try {
         let { status = true, blog_id = '' } = req.body;
 
@@ -2015,7 +2024,7 @@ async function UpdateBlogArchive(req, resp) {
 }
 
 
-async function CommentOnSharePost(req, resp) {
+export async function CommentOnSharePost(req, resp) {
     try {
         let { user_id = '', blog_id = '', shared_blog_id = '', comment = '', comment_id = '', status = '' } = req.body;
 
@@ -2108,14 +2117,14 @@ async function CommentOnSharePost(req, resp) {
                 let notification = new AllNotificationsModel(obj);
                 notification = await notification.save();
                 let file_name = from.photo;
-                let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+                let file_path = `${storageFolderPath()}users/${file_name}`;
                 let file_view_path = `${APP_STORAGE}users/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
                 let to_file_name = to.photo;
-                let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
+                let to_file_path = `${storageFolderPath()}users/${to_file_name}`;
                 let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
-                let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
+                let to_file_dtl = await FileInfo(to_file_name, to_file_path, to_file_view_path);
                 let reset_notification = {
                     ...notification._doc,
                     to_user_file_view_path: to_file_dtl.file_view_path,
@@ -2163,14 +2172,14 @@ async function CommentOnSharePost(req, resp) {
                 let notification = new AllNotificationsModel(obj2);
                 notification = await notification.save();
                 let file_name = from2.photo;
-                let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+                let file_path = `${storageFolderPath()}users/${file_name}`;
                 let file_view_path = `${APP_STORAGE}users/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
                 let to_file_name = to2.photo;
-                let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
+                let to_file_path = `${storageFolderPath()}users/${to_file_name}`;
                 let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
-                let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
+                let to_file_dtl = await FileInfo(to_file_name, to_file_path, to_file_view_path);
                 let reset_notification = {
                     ...notification._doc,
                     to_user_file_view_path: to_file_dtl.file_view_path,
@@ -2229,9 +2238,9 @@ async function CommentOnSharePost(req, resp) {
             let user = new UsersModel();
             user = await user.findByUserId(user_id);
             let file_name = user.photo;
-            let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+            let file_path = `${storageFolderPath()}users/${file_name}`;
             let file_view_path = `${APP_STORAGE}users/${file_name}`;
-            let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+            let file_dtl = await FileInfo(file_name, file_path, file_view_path);
             insert_data = {
                 ...insert_data._doc,
                 "shared_by_id": insert_data._doc.shared_by_id,
@@ -2292,7 +2301,7 @@ async function CommentOnSharePost(req, resp) {
     }
 }
 
-async function LikeAndDislikeOnSharePost(req, resp) {
+export async function LikeAndDislikeOnSharePost(req, resp) {
     try {
         let { user_id = '', blog_id = '', status = 0, shared_blog_id = '' } = req.body;
 
@@ -2408,14 +2417,14 @@ async function LikeAndDislikeOnSharePost(req, resp) {
                 let notification = new AllNotificationsModel(obj);
                 notification = await notification.save();
                 let file_name = from.photo;
-                let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+                let file_path = `${storageFolderPath()}users/${file_name}`;
                 let file_view_path = `${APP_STORAGE}users/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
                 let to_file_name = to.photo;
-                let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
+                let to_file_path = `${storageFolderPath()}users/${to_file_name}`;
                 let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
-                let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
+                let to_file_dtl = await FileInfo(to_file_name, to_file_path, to_file_view_path);
                 let reset_notification = {
                     ...notification._doc,
                     to_user_file_view_path: to_file_dtl.file_view_path,
@@ -2462,14 +2471,14 @@ async function LikeAndDislikeOnSharePost(req, resp) {
                 let notification = new AllNotificationsModel(obj2);
                 notification = await notification.save();
                 let file_name = from2.photo;
-                let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+                let file_path = `${storageFolderPath()}users/${file_name}`;
                 let file_view_path = `${APP_STORAGE}users/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
                 let to_file_name = to2.photo;
-                let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
+                let to_file_path = `${storageFolderPath()}users/${to_file_name}`;
                 let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
-                let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
+                let to_file_dtl = await FileInfo(to_file_name, to_file_path, to_file_view_path);
                 let reset_notification = {
                     ...notification._doc,
                     to_user_file_view_path: to_file_dtl.file_view_path,
@@ -2535,7 +2544,7 @@ async function LikeAndDislikeOnSharePost(req, resp) {
     }
 }
 
-async function ShareBlog(req, resp) {
+export async function ShareBlog(req, resp) {
     try {
         let { user_id = '', blog_id = '' } = req.body;
         if (!user_id) {
@@ -2557,7 +2566,7 @@ async function ShareBlog(req, resp) {
                 title: main_blog.title,
                 content: main_blog.content,
                 photo: main_blog.photo,
-                content_alias: `${main_blog.content_alias}-${Healper.generateRandomString(6)}`,
+                content_alias: `${main_blog.content_alias}-${generateRandomString(6)}`,
                 blog_type: main_blog.blog_type,
                 sort_description: main_blog.sort_description,
                 like: true,
@@ -2587,7 +2596,7 @@ async function ShareBlog(req, resp) {
                 title: blog.title,
                 content: blog.content,
                 photo: blog.photo,
-                content_alias: `${blog.content_alias}-${Healper.generateRandomString(6)}`,
+                content_alias: `${blog.content_alias}-${generateRandomString(6)}`,
                 blog_type: blog.blog_type,
                 sort_description: blog.sort_description,
                 like: true,
@@ -2648,14 +2657,14 @@ async function ShareBlog(req, resp) {
             let notification = new AllNotificationsModel(obj);
             notification = await notification.save();
             let file_name = from.photo;
-            let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+            let file_path = `${storageFolderPath()}users/${file_name}`;
             let file_view_path = `${APP_STORAGE}users/${file_name}`;
-            let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+            let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
             let to_file_name = to.photo;
-            let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
+            let to_file_path = `${storageFolderPath()}users/${to_file_name}`;
             let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
-            let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
+            let to_file_dtl = await FileInfo(to_file_name, to_file_path, to_file_view_path);
             let reset_notification = {
                 ...notification._doc,
                 to_user_file_view_path: to_file_dtl.file_view_path,
@@ -2690,7 +2699,7 @@ async function ShareBlog(req, resp) {
     }
 }
 
-async function ShareBlogToFriends(req, resp) {
+export async function ShareBlogToFriends(req, resp) {
     try {
         let { user_id = '', blog_id = '', selected_user = [], text = '' } = req.body;
         if (!user_id) {
@@ -2853,29 +2862,29 @@ async function ShareBlogToFriends(req, resp) {
             let resetchatdata_is = await Promise.all(
                 save_chats.map(async element => {
                     let file_name = `${element.chat_file}`;
-                    let file_path = `${Healper.storageFolderPath()}user-blogs/${file_name}`;
+                    let file_path = `${storageFolderPath()}user-blogs/${file_name}`;
                     let file_view_path = `${APP_STORAGE}user-blogs/${file_name}`;
-                    let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                    let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
                     let file_name1 = element.blog_photo;
-                    let file_path1 = `${Healper.storageFolderPath()}user-blogs/${file_name1}`;
+                    let file_path1 = `${storageFolderPath()}user-blogs/${file_name1}`;
                     let file_view_path1 = `${APP_STORAGE}user-blogs/${file_name1}`;
-                    let file_dtl1 = await Healper.FileInfo(file_name1, file_path1, file_view_path1);
+                    let file_dtl1 = await FileInfo(file_name1, file_path1, file_view_path1);
 
                     let file_name2 = element.blog_thumbnail;
-                    let file_path2 = `${Healper.storageFolderPath()}user-blogs/thumbnail/${file_name2}`;
+                    let file_path2 = `${storageFolderPath()}user-blogs/thumbnail/${file_name2}`;
                     let file_view_path2 = `${APP_STORAGE}user-blogs/thumbnail/${file_name2}`;
-                    let file_dtl2 = await Healper.FileInfo(file_name2, file_path2, file_view_path2);
+                    let file_dtl2 = await FileInfo(file_name2, file_path2, file_view_path2);
 
                     let file_name3 = element.main_blog_photo;
-                    let file_path3 = `${Healper.storageFolderPath()}user-blogs/${file_name3}`;
+                    let file_path3 = `${storageFolderPath()}user-blogs/${file_name3}`;
                     let file_view_path3 = `${APP_STORAGE}user-blogs/${file_name3}`;
-                    let file_dtl3 = await Healper.FileInfo(file_name3, file_path3, file_view_path3);
+                    let file_dtl3 = await FileInfo(file_name3, file_path3, file_view_path3);
 
                     let file_name4 = element.main_blog_thumbnail;
-                    let file_path4 = `${Healper.storageFolderPath()}user-blogs/thumbnail/${file_name4}`;
+                    let file_path4 = `${storageFolderPath()}user-blogs/thumbnail/${file_name4}`;
                     let file_view_path4 = `${APP_STORAGE}user-blogs/thumbnail/${file_name4}`;
-                    let file_dtl4 = await Healper.FileInfo(file_name4, file_path4, file_view_path4);
+                    let file_dtl4 = await FileInfo(file_name4, file_path4, file_view_path4);
 
                     return {
                         ...element,
@@ -2940,14 +2949,14 @@ async function ShareBlogToFriends(req, resp) {
             let reset_notifications = await Promise.all(
                 save_notifications.map(async element => {
                     let noti_file_name = from.photo;
-                    let noti_file_path = `${Healper.storageFolderPath()}users/${noti_file_name}`;
+                    let noti_file_path = `${storageFolderPath()}users/${noti_file_name}`;
                     let noti_file_view_path = `${APP_STORAGE}users/${noti_file_name}`;
-                    let noti_file_dtl = await Healper.FileInfo(noti_file_name, noti_file_path, noti_file_view_path);
+                    let noti_file_dtl = await FileInfo(noti_file_name, noti_file_path, noti_file_view_path);
 
                     let noti_to_file_name = element._doc.to_user_photo;
-                    let noti_to_file_path = `${Healper.storageFolderPath()}users/${noti_to_file_name}`;
+                    let noti_to_file_path = `${storageFolderPath()}users/${noti_to_file_name}`;
                     let noti_to_file_view_path = `${APP_STORAGE}users/${noti_to_file_name}`;
-                    let noti_to_file_dtl = await Healper.FileInfo(noti_to_file_name, noti_to_file_path, noti_to_file_view_path);
+                    let noti_to_file_dtl = await FileInfo(noti_to_file_name, noti_to_file_path, noti_to_file_view_path);
                     return {
                         ...element._doc,
                         to_user_file_view_path: noti_to_file_dtl.file_view_path,
@@ -2994,7 +3003,7 @@ async function ShareBlogToFriends(req, resp) {
     }
 }
 
-async function UpdateBlogSetting(req, resp) {
+export async function UpdateBlogSetting(req, resp) {
     try {
 
         let { id = "", like = true, share = true, comment = true } = req.body;
@@ -3009,7 +3018,7 @@ async function UpdateBlogSetting(req, resp) {
             comment: comment,
             updated_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
         };
-        data = await BlogsModel.findByIdAndUpdate(
+        let data = await BlogsModel.findByIdAndUpdate(
             { _id: new mongodb.ObjectId(id) },
             { $set: update },
             { new: true, useFindAndModify: false }
@@ -3021,7 +3030,7 @@ async function UpdateBlogSetting(req, resp) {
 }
 
 
-async function ShareList(req, resp) {
+export async function ShareList(req, resp) {
     try {
         let { limit = 5, page = 1 } = req.query;
         let { blog_id = '', user_id = '' } = req.body;
@@ -3077,9 +3086,9 @@ async function ShareList(req, resp) {
         let resetdata_is = await Promise.all(
             list.map(async (element) => {
                 let file_name = element.user_photo;
-                let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+                let file_path = `${storageFolderPath()}users/${file_name}`;
                 let file_view_path = `${APP_STORAGE}users/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
                 return {
                     ...element,
                     "created_at": moment(element.created_at).format('YYYY-MM-DD HH:mm:ss'),
@@ -3088,7 +3097,7 @@ async function ShareList(req, resp) {
                 }
             })
         );
-        let result = Healper.PaginationData(resetdata_is, total, limit, page);
+        let result = PaginationData(resetdata_is, total, limit, page);
         let mytotal = await SharesModel
             .find({
                 $and: [
@@ -3107,7 +3116,7 @@ async function ShareList(req, resp) {
 }
 
 
-async function UpdateBlogPublishStatus(req, resp) {
+export async function UpdateBlogPublishStatus(req, resp) {
     try {
         let { status = true, blog_id = '' } = req.body;
 
@@ -3122,7 +3131,7 @@ async function UpdateBlogPublishStatus(req, resp) {
             publish: status,
             updated_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
         };
-        data = await BlogsModel.findByIdAndUpdate(
+        let data = await BlogsModel.findByIdAndUpdate(
             { _id: new mongodb.ObjectId(blog_id) },
             { $set: update },
             { new: true, useFindAndModify: false }
@@ -3132,7 +3141,7 @@ async function UpdateBlogPublishStatus(req, resp) {
         return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
     }
 }
-async function UploadBlogVideo(req, resp) {
+export async function UploadBlogVideo(req, resp) {
     try {
 
 
@@ -3141,5 +3150,3 @@ async function UploadBlogVideo(req, resp) {
         return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
     }
 }
-
-module.exports = { UplodePhoto, CreactBlog, Myblogs, BlogByid, DeleteBlogByid, UpdateBlog, BlogsCategoryList, UplodeThumbnail, BlogByAlias, LikeAndDislike, UserComment, Comment, CommentList, hideComments, UpdateBlogArchive, CommentOnSharePost, LikeAndDislikeOnSharePost, ShareBlog, UpdateBlogSetting, ShareList, ShareBlogToFriends, UpdateBlogPublishStatus, UploadBlogVideo };

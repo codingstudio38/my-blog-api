@@ -1,18 +1,21 @@
-const mongodb = require('mongodb');
-const moment = require('moment-timezone');
-const mongoose = require('mongoose');
-const UsersFriendRequestModel = require('../Models/UsersFriendRequestModel');
-const UsersFriendModel = require('../Models/UsersFriendModel');
-const AllNotificationsModel = require('../Models/AllNotificationsModel');
-const Healper = require('./Healper');
-const { clients } = require("./WebsocketController");
+// import dotenv from "dotenv";
+// dotenv.config();
+import mongodb from "mongodb";
+import moment from "moment-timezone";
+import mongoose from "mongoose";
+import UsersFriendRequestModel from "../Models/UsersFriendRequestModel.js";
+import UsersFriendModel from "../Models/UsersFriendModel.js";
+import AllNotificationsModel from "../Models/AllNotificationsModel.js";
+import { PaginationData, generateRandomString, storageFolderPath, FileInfo, DeleteFile, FileExists, data_decrypt, data_encrypt } from "./Healper.js";
+import { clients } from "./WebsocketController.js";
+
 const new_friend_request = process.env.new_friend_request;
 const cancel_friend_request = process.env.cancel_friend_request;
 const accept_friend_request = process.env.accept_friend_request;
 const reject_friend_request = process.env.reject_friend_request;
 const remove_friend = process.env.remove_friend;
 const APP_STORAGE = process.env.APP_STORAGE;
-async function SendRequest(req, resp) {
+export async function SendRequest(req, resp) {
     try {
         let { user_id = '', to = '' } = req.body;
         if (!user_id) {
@@ -63,14 +66,14 @@ async function SendRequest(req, resp) {
         });
         notification = await notification.save();
         let file_name = friend_request[0].from_user_photo;
-        let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+        let file_path = `${storageFolderPath()}users/${file_name}`;
         let file_view_path = `${APP_STORAGE}users/${file_name}`;
-        let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+        let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
         let to_file_name = friend_request[0].to_user_photo;
-        let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
+        let to_file_path = `${storageFolderPath()}users/${to_file_name}`;
         let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
-        let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
+        let to_file_dtl = await FileInfo(to_file_name, to_file_path, to_file_view_path);
 
         let reset_notification = {
             _id: notification._id,
@@ -102,7 +105,7 @@ async function SendRequest(req, resp) {
     }
 }
 
-async function CencelRequest(req, resp) {
+export async function CencelRequest(req, resp) {
     try {
         let { user_id = '', to = '', requestid = '' } = req.body;
         if (!user_id) {
@@ -160,14 +163,14 @@ async function CencelRequest(req, resp) {
             });
             notification = await notification.save();
             let file_name = friend_request[0].from_user_photo;
-            let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+            let file_path = `${storageFolderPath()}users/${file_name}`;
             let file_view_path = `${APP_STORAGE}users/${file_name}`;
-            let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+            let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
             let to_file_name = friend_request[0].to_user_photo;
-            let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
+            let to_file_path = `${storageFolderPath()}users/${to_file_name}`;
             let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
-            let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
+            let to_file_dtl = await FileInfo(to_file_name, to_file_path, to_file_view_path);
 
             let reset_notification = {
                 _id: notification._id,
@@ -202,7 +205,7 @@ async function CencelRequest(req, resp) {
     }
 }
 
-async function AcceptOrRejectRequest(req, resp) {
+export async function AcceptOrRejectRequest(req, resp) {
     try {
         let { user_id = '', from = '', to = '', requestid = '', accept_status = 0 } = req.body;
         if (!user_id) {
@@ -254,13 +257,13 @@ async function AcceptOrRejectRequest(req, resp) {
                 });
                 notification = await notification.save();
                 let file_name = friend_request[0].from_user_photo;
-                let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+                let file_path = `${storageFolderPath()}users/${file_name}`;
                 let file_view_path = `${APP_STORAGE}users/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
                 let to_file_name = friend_request[0].to_user_photo;
-                let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
+                let to_file_path = `${storageFolderPath()}users/${to_file_name}`;
                 let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
-                let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
+                let to_file_dtl = await FileInfo(to_file_name, to_file_path, to_file_view_path);
                 let reset_notification = {
                     _id: notification._id,
                     userid: notification.userid,
@@ -305,13 +308,13 @@ async function AcceptOrRejectRequest(req, resp) {
                 });
                 notification = await notification.save();
                 let file_name = friend_request[0].from_user_photo;
-                let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+                let file_path = `${storageFolderPath()}users/${file_name}`;
                 let file_view_path = `${APP_STORAGE}users/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
                 let to_file_name = friend_request[0].to_user_photo;
-                let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
+                let to_file_path = `${storageFolderPath()}users/${to_file_name}`;
                 let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
-                let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
+                let to_file_dtl = await FileInfo(to_file_name, to_file_path, to_file_view_path);
                 let reset_notification = {
                     _id: notification._id,
                     userid: notification.userid,
@@ -347,7 +350,7 @@ async function AcceptOrRejectRequest(req, resp) {
     }
 }
 
-async function DeleteFriend(req, resp) {
+export async function DeleteFriend(req, resp) {
     try {
         let { requestid = '', user_id } = req.body;
         if (!requestid) {
@@ -395,14 +398,14 @@ async function DeleteFriend(req, resp) {
         });
         notification = await notification.save();
         let file_name = friend_request[0].from_user_photo;
-        let file_path = `${Healper.storageFolderPath()}users/${file_name}`;
+        let file_path = `${storageFolderPath()}users/${file_name}`;
         let file_view_path = `${APP_STORAGE}users/${file_name}`;
-        let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+        let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
         let to_file_name = friend_request[0].to_user_photo;
-        let to_file_path = `${Healper.storageFolderPath()}users/${to_file_name}`;
+        let to_file_path = `${storageFolderPath()}users/${to_file_name}`;
         let to_file_view_path = `${APP_STORAGE}users/${to_file_name}`;
-        let to_file_dtl = await Healper.FileInfo(to_file_name, to_file_path, to_file_view_path);
+        let to_file_dtl = await FileInfo(to_file_name, to_file_path, to_file_view_path);
 
         let reset_notification = {
             _id: notification._id,
@@ -435,5 +438,3 @@ async function DeleteFriend(req, resp) {
         return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
     }
 }
-
-module.exports = { SendRequest, CencelRequest, AcceptOrRejectRequest, DeleteFriend }

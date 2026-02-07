@@ -1,24 +1,30 @@
-const mongodb = require('mongodb');
-const moment = require('moment-timezone');
-const mongoose = require('mongoose');
-const UsersModel = require('../Models/UsersModel');
-const UsersChatModel = require('../Models/UsersChatModel');
-const UsersFriendModel = require('../Models/UsersFriendModel');
-const AllNotificationsModel = require('../Models/AllNotificationsModel');
-const { clients } = require("./WebsocketController");
-const Healper = require('./Healper');
-const bcrypt = require("bcrypt");
-const crypto = require('crypto');
-const path = require('path');
-const fs = require('fs');
+// import dotenv from "dotenv";
+// dotenv.config();
+import mongodb from "mongodb";
+import moment from "moment-timezone";
+import mongoose from "mongoose";
+
+import UsersModel from "../Models/UsersModel.js";
+import UsersChatModel from "../Models/UsersChatModel.js";
+import UsersFriendModel from "../Models/UsersFriendModel.js";
+import AllNotificationsModel from "../Models/AllNotificationsModel.js";
+
+import { clients } from "./WebsocketController.js";
+import { PaginationData, generateRandomString, storageFolderPath, FileInfo, DeleteFile, FileExists, data_decrypt, data_encrypt } from "./Healper.js";
+
+import bcrypt from "bcrypt";
+import crypto from "crypto";
+import path from "path";
+import fs from "fs";
+
 const APP_URL = process.env.APP_URL;
 const APP_STORAGE = process.env.APP_STORAGE;
 const new_chat_message = process.env.new_chat_message;
-async function UploadChatFile(req, resp) {
+export async function UploadChatFile(req, resp) {
     try {
         let { userid = '' } = req.body;
         let fileIs = '', file_size = 0, file_name = '', file_type = '', file_new_name = '', file_mimetype = '', blog_file_path = '';
-        blog_file_path = `${Healper.storageFolderPath()}user-chats/temp/user${userid}`;
+        blog_file_path = `${storageFolderPath()}user-chats/temp/user${userid}`;
         if (!userid) {
             return resp.status(200).json({ 'status': 400, 'message': 'user id required.' });
         }
@@ -47,7 +53,7 @@ async function UploadChatFile(req, resp) {
     }
 }
 
-async function ChatList(req, resp) {
+export async function ChatList(req, resp) {
     try {
         var { page = 1, limit = 10, start = 0 } = req.query;
         var { from_user, to_user } = req.body;
@@ -229,29 +235,29 @@ async function ChatList(req, resp) {
         let resetdata_is = await Promise.all(
             chat_data.map(async (element) => {
                 let file_name = element.chat_file;
-                let file_path = `${Healper.storageFolderPath()}user-chats/${file_name}`;
+                let file_path = `${storageFolderPath()}user-chats/${file_name}`;
                 let file_view_path = `${APP_STORAGE}user-chats/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
                 let file_name1 = element.blog_photo;
-                let file_path1 = `${Healper.storageFolderPath()}user-blogs/${file_name1}`;
+                let file_path1 = `${storageFolderPath()}user-blogs/${file_name1}`;
                 let file_view_path1 = `${APP_STORAGE}user-blogs/${file_name1}`;
-                let file_dtl1 = await Healper.FileInfo(file_name1, file_path1, file_view_path1);
+                let file_dtl1 = await FileInfo(file_name1, file_path1, file_view_path1);
 
                 let file_name2 = element.blog_thumbnail;
-                let file_path2 = `${Healper.storageFolderPath()}user-blogs/thumbnail/${file_name2}`;
+                let file_path2 = `${storageFolderPath()}user-blogs/thumbnail/${file_name2}`;
                 let file_view_path2 = `${APP_STORAGE}user-blogs/thumbnail/${file_name2}`;
-                let file_dtl2 = await Healper.FileInfo(file_name2, file_path2, file_view_path2);
+                let file_dtl2 = await FileInfo(file_name2, file_path2, file_view_path2);
 
                 let file_name3 = element.main_blog_photo;
-                let file_path3 = `${Healper.storageFolderPath()}user-blogs/${file_name3}`;
+                let file_path3 = `${storageFolderPath()}user-blogs/${file_name3}`;
                 let file_view_path3 = `${APP_STORAGE}user-blogs/${file_name3}`;
-                let file_dtl3 = await Healper.FileInfo(file_name3, file_path3, file_view_path3);
+                let file_dtl3 = await FileInfo(file_name3, file_path3, file_view_path3);
 
                 let file_name4 = element.main_blog_thumbnail;
-                let file_path4 = `${Healper.storageFolderPath()}user-blogs/thumbnail/${file_name4}`;
+                let file_path4 = `${storageFolderPath()}user-blogs/thumbnail/${file_name4}`;
                 let file_view_path4 = `${APP_STORAGE}user-blogs/thumbnail/${file_name4}`;
-                let file_dtl4 = await Healper.FileInfo(file_name4, file_path4, file_view_path4);
+                let file_dtl4 = await FileInfo(file_name4, file_path4, file_view_path4);
 
                 return {
                     ...element,
@@ -284,7 +290,7 @@ async function ChatList(req, resp) {
             })
         );
         let alldata = resetdata_is.sort((a, b) => a.intid - b.intid);
-        let pagination = Healper.PaginationData(alldata, total_records, limit, page);
+        let pagination = PaginationData(alldata, total_records, limit, page);
         return resp
             .status(200)
             .json({
@@ -300,7 +306,7 @@ async function ChatList(req, resp) {
     }
 }
 
-async function FindChat(req, resp) {
+export async function FindChat(req, resp) {
     try {
         var { chatid, from_user, to_user } = req.body;
         if (!chatid) {
@@ -320,29 +326,29 @@ async function FindChat(req, resp) {
         chat = await chat.findBChatId(chatid);
         chat = chat.length > 0 ? chat[0] : {};
         let file_name = chat.chat_file;
-        let file_path = `${Healper.storageFolderPath()}user-chats/${file_name}`;
+        let file_path = `${storageFolderPath()}user-chats/${file_name}`;
         let file_view_path = `${APP_STORAGE}user-chats/${file_name}`;
-        let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+        let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
         let file_name1 = chat.blog_photo;
-        let file_path1 = `${Healper.storageFolderPath()}user-blogs/${file_name1}`;
+        let file_path1 = `${storageFolderPath()}user-blogs/${file_name1}`;
         let file_view_path1 = `${APP_STORAGE}user-blogs/${file_name1}`;
-        let file_dtl1 = await Healper.FileInfo(file_name1, file_path1, file_view_path1);
+        let file_dtl1 = await FileInfo(file_name1, file_path1, file_view_path1);
 
         let file_name2 = chat.blog_thumbnail;
-        let file_path2 = `${Healper.storageFolderPath()}user-blogs/thumbnail/${file_name2}`;
+        let file_path2 = `${storageFolderPath()}user-blogs/thumbnail/${file_name2}`;
         let file_view_path2 = `${APP_STORAGE}user-blogs/thumbnail/${file_name2}`;
-        let file_dtl2 = await Healper.FileInfo(file_name2, file_path2, file_view_path2);
+        let file_dtl2 = await FileInfo(file_name2, file_path2, file_view_path2);
 
         let file_name3 = chat.main_blog_photo;
-        let file_path3 = `${Healper.storageFolderPath()}user-blogs/${file_name3}`;
+        let file_path3 = `${storageFolderPath()}user-blogs/${file_name3}`;
         let file_view_path3 = `${APP_STORAGE}user-blogs/${file_name3}`;
-        let file_dtl3 = await Healper.FileInfo(file_name3, file_path3, file_view_path3);
+        let file_dtl3 = await FileInfo(file_name3, file_path3, file_view_path3);
 
         let file_name4 = chat.main_blog_thumbnail;
-        let file_path4 = `${Healper.storageFolderPath()}user-blogs/thumbnail/${file_name4}`;
+        let file_path4 = `${storageFolderPath()}user-blogs/thumbnail/${file_name4}`;
         let file_view_path4 = `${APP_STORAGE}user-blogs/thumbnail/${file_name4}`;
-        let file_dtl4 = await Healper.FileInfo(file_name4, file_path4, file_view_path4);
+        let file_dtl4 = await FileInfo(file_name4, file_path4, file_view_path4);
 
         let rest_chat = {
             ...chat,
@@ -390,11 +396,11 @@ async function FindChat(req, resp) {
 }
 
 
-async function SaveChat(req, resp) {
+export async function SaveChat(req, resp) {
     try {
         var { from_user, to_user, message, file_name } = req.body;
-        let file_path = `${Healper.storageFolderPath()}user-chats/temp/user${from_user}/${file_name}`,
-            new_file_path = `${Healper.storageFolderPath()}user-chats/${file_name}`;
+        let file_path = `${storageFolderPath()}user-chats/temp/user${from_user}/${file_name}`,
+            new_file_path = `${storageFolderPath()}user-chats/${file_name}`;
         if (!from_user) {
             return resp
                 .status(200)
@@ -441,29 +447,29 @@ async function SaveChat(req, resp) {
         findchat = await findchat.findBChatId(chat._doc._id);
         findchat = findchat.length > 0 ? findchat[0] : {};
         let file_name11 = chat.chat_file;
-        let file_path11 = `${Healper.storageFolderPath()}user-chats/${file_name11}`;
+        let file_path11 = `${storageFolderPath()}user-chats/${file_name11}`;
         let file_view_path11 = `${APP_STORAGE}user-chats/${file_name11}`;
-        let file_dtl11 = await Healper.FileInfo(file_name11, file_path11, file_view_path11);
+        let file_dtl11 = await FileInfo(file_name11, file_path11, file_view_path11);
 
         let file_name1 = chat.blog_photo;
-        let file_path1 = `${Healper.storageFolderPath()}user-blogs/${file_name1}`;
+        let file_path1 = `${storageFolderPath()}user-blogs/${file_name1}`;
         let file_view_path1 = `${APP_STORAGE}user-blogs/${file_name1}`;
-        let file_dtl1 = await Healper.FileInfo(file_name1, file_path1, file_view_path1);
+        let file_dtl1 = await FileInfo(file_name1, file_path1, file_view_path1);
 
         let file_name2 = chat.blog_thumbnail;
-        let file_path2 = `${Healper.storageFolderPath()}user-blogs/thumbnail/${file_name2}`;
+        let file_path2 = `${storageFolderPath()}user-blogs/thumbnail/${file_name2}`;
         let file_view_path2 = `${APP_STORAGE}user-blogs/thumbnail/${file_name2}`;
-        let file_dtl2 = await Healper.FileInfo(file_name2, file_path2, file_view_path2);
+        let file_dtl2 = await FileInfo(file_name2, file_path2, file_view_path2);
 
         let file_name3 = chat.main_blog_photo;
-        let file_path3 = `${Healper.storageFolderPath()}user-blogs/${file_name3}`;
+        let file_path3 = `${storageFolderPath()}user-blogs/${file_name3}`;
         let file_view_path3 = `${APP_STORAGE}user-blogs/${file_name3}`;
-        let file_dtl3 = await Healper.FileInfo(file_name3, file_path3, file_view_path3);
+        let file_dtl3 = await FileInfo(file_name3, file_path3, file_view_path3);
 
         let file_name4 = chat.main_blog_thumbnail;
-        let file_path4 = `${Healper.storageFolderPath()}user-blogs/thumbnail/${file_name4}`;
+        let file_path4 = `${storageFolderPath()}user-blogs/thumbnail/${file_name4}`;
         let file_view_path4 = `${APP_STORAGE}user-blogs/thumbnail/${file_name4}`;
-        let file_dtl4 = await Healper.FileInfo(file_name4, file_path4, file_view_path4);
+        let file_dtl4 = await FileInfo(file_name4, file_path4, file_view_path4);
 
         let rest_chat = {
             ...findchat,
@@ -520,14 +526,14 @@ async function SaveChat(req, resp) {
         notification = await notification.save();
 
         let noti_file_name = friends_list[0].from_user_photo;
-        let noti_file_path = `${Healper.storageFolderPath()}users/${noti_file_name}`;
+        let noti_file_path = `${storageFolderPath()}users/${noti_file_name}`;
         let noti_file_view_path = `${APP_STORAGE}users/${noti_file_name}`;
-        let noti_file_dtl = await Healper.FileInfo(noti_file_name, noti_file_path, noti_file_view_path);
+        let noti_file_dtl = await FileInfo(noti_file_name, noti_file_path, noti_file_view_path);
 
         let noti_to_file_name = friends_list[0].to_user_photo;
-        let noti_to_file_path = `${Healper.storageFolderPath()}users/${noti_to_file_name}`;
+        let noti_to_file_path = `${storageFolderPath()}users/${noti_to_file_name}`;
         let noti_to_file_view_path = `${APP_STORAGE}users/${noti_to_file_name}`;
-        let noti_to_file_dtl = await Healper.FileInfo(noti_to_file_name, noti_to_file_path, noti_to_file_view_path);
+        let noti_to_file_dtl = await FileInfo(noti_to_file_name, noti_to_file_path, noti_to_file_view_path);
 
         let rest_notification = {
             ...notification._doc,
@@ -554,7 +560,7 @@ async function SaveChat(req, resp) {
     }
 }
 
-async function UpdateUnreadMessage(req, resp) {
+export async function UpdateUnreadMessage(req, resp) {
     try {
         let { from, to } = req.body;
 
@@ -572,5 +578,3 @@ async function UpdateUnreadMessage(req, resp) {
             .json({ status: 400, message: "Failed..!!", error: error.message });
     }
 }
-
-module.exports = { UploadChatFile, ChatList, FindChat, SaveChat, UpdateUnreadMessage }

@@ -1,16 +1,24 @@
-const moment = require('moment-timezone');
-const mongooseConnect = require('../Config/MongooseConfig');
-const mongoose = require('mongoose');
-const mongodb = require('mongodb');
-const Schema = new mongooseConnect.Schema({
-    from: { type: 'ObjectId', required: true, trim: true, },
-    to: { type: 'ObjectId', required: true, trim: true, },
+import moment from "moment-timezone";
+import mongoose from "mongoose";
+import mongodb from "mongodb";
+import mongooseConnect from "../Config/MongooseConfig.js";
+
+const UsersFriendRequestSchema = new mongooseConnect.Schema({
+    from: { type: "ObjectId", required: true, trim: true },
+    to: { type: "ObjectId", required: true, trim: true },
+
     accept_status: { type: Number, required: true, default: 0 },
-    delete: { type: Number, required: false, default: 0 },
-    created_at: { type: Date, required: true, default: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss') },//new Date()
-    updated_at: { type: Date, required: false, default: null },
+    delete: { type: Number, default: 0 },
+
+    created_at: {
+        type: Date,
+        required: true,
+        default: () => moment().tz(process.env.TIMEZONE).format("YYYY-MM-DD HH:mm:ss"),
+    },
+
+    updated_at: { type: Date, default: null },
 });
-Schema.methods.checkFriendRequest = async function (from, to) {
+UsersFriendRequestSchema.methods.checkFriendRequest = async function (from, to) {
     try {
         return await mongoose.model('users_friend_requests').aggregate([
             {
@@ -57,7 +65,7 @@ Schema.methods.checkFriendRequest = async function (from, to) {
         throw new Error(error);
     }
 }
-Schema.methods.checkByRequestId = async function (id) {
+UsersFriendRequestSchema.methods.checkByRequestId = async function (id) {
     try {
         return await mongoose.model('users_friend_requests').aggregate([
             {
@@ -100,5 +108,9 @@ Schema.methods.checkByRequestId = async function (id) {
         throw new Error(error);
     }
 }
-const UsersFriendRequestModel = mongooseConnect.model('users_friend_requests', Schema);
-module.exports = UsersFriendRequestModel;
+const UsersFriendRequestModel = mongooseConnect.model(
+    "users_friend_requests",
+    UsersFriendRequestSchema
+);
+
+export default UsersFriendRequestModel;

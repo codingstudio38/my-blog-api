@@ -1,16 +1,24 @@
-const moment = require('moment-timezone');
-const mongooseConnect = require('../Config/MongooseConfig');
-const mongoose = require('mongoose');
-const mongodb = require('mongodb');
-const Schema = new mongooseConnect.Schema({
-    requestid: { type: 'ObjectId', required: true, trim: true, },
-    userid: { type: 'ObjectId', required: true, trim: true, },
-    friend: { type: 'ObjectId', required: true, trim: true, },
-    delete: { type: Number, required: false, default: 0 },
-    created_at: { type: Date, required: true, default: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss') },//new Date()
-    updated_at: { type: Date, required: false, default: null },
+import moment from "moment-timezone";
+import mongoose from "mongoose";
+import mongodb from "mongodb";
+import mongooseConnect from "../Config/MongooseConfig.js";
+
+const UsersFriendSchema = new mongooseConnect.Schema({
+    requestid: { type: "ObjectId", required: true, trim: true },
+    userid: { type: "ObjectId", required: true, trim: true },
+    friend: { type: "ObjectId", required: true, trim: true },
+
+    delete: { type: Number, default: 0 },
+
+    created_at: {
+        type: Date,
+        required: true,
+        default: () => moment().tz(process.env.TIMEZONE).format("YYYY-MM-DD HH:mm:ss"),
+    },
+
+    updated_at: { type: Date, default: null },
 });
-Schema.methods.IsFriend = async function (userid, friendid) {
+UsersFriendSchema.methods.IsFriend = async function (userid, friendid) {
     try {
         return await mongoose.model('users_friends').find({
             $and: [
@@ -23,7 +31,7 @@ Schema.methods.IsFriend = async function (userid, friendid) {
         throw new Error(error);
     }
 }
-Schema.methods.MyFriend = async function (userid, friendid) {
+UsersFriendSchema.methods.MyFriend = async function (userid, friendid) {
     try {
         return await mongoose.model('users_friends').aggregate([
             {
@@ -72,7 +80,7 @@ Schema.methods.MyFriend = async function (userid, friendid) {
         throw new Error(error);
     }
 }
-Schema.methods.getAllMyFriendByid = async function (userid) {
+UsersFriendSchema.methods.getAllMyFriendByid = async function (userid) {
     try {
         return await mongoose.model('users_friends').aggregate([
             {
@@ -120,7 +128,7 @@ Schema.methods.getAllMyFriendByid = async function (userid) {
         throw new Error(error);
     }
 }
-Schema.methods.getAllMyFriendFromUsersModalByid = async function (userid) {
+UsersFriendSchema.methods.getAllMyFriendFromUsersModalByid = async function (userid) {
     try {
         return await mongoose.model('users').aggregate([
             {
@@ -207,5 +215,9 @@ Schema.methods.getAllMyFriendFromUsersModalByid = async function (userid) {
         throw new Error(error);
     }
 }
-const UsersFriendModel = mongooseConnect.model('users_friends', Schema);
-module.exports = UsersFriendModel;
+const UsersFriendModel = mongooseConnect.model(
+    "users_friends",
+    UsersFriendSchema
+);
+
+export default UsersFriendModel;

@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "start": "nodemon index.js -e js,ejs",
-    "dev": "nodemon index.js -e js,ejs"
+    "start": "nodemon --env-file=.env index.js -e js,ejs",
+    "dev": "nodemon --env-file=.env index.js -e js,ejs"
   },
   "keywords": [],
   "author": "",

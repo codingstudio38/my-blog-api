@@ -1,10 +1,20 @@
-const path = require('path');
-const fs = require('fs');
-const mime = require('mime');
-const CryptoJS = require('crypto-js');
+// import dotenv from "dotenv";
+// dotenv.config();
+import path from "path";
+import fs from "fs";
+import mime from "mime";
+// import * as mime from "mime";
+
+import CryptoJS from "crypto-js";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const data_secretKey = 'bc665a1f223dba15f5fbf5df08838647';  // 16-byte key
 const data_ivString = 'bc66-f223-dba1-8647-2345-fd45-dfg3';
-function PaginationData(data, total, limitis, pageis) {
+
+export function PaginationData(data, total, limitis, pageis) {
     try {
         var totalpage, nextPage, record_from, record_to, hasNextPage, hasPrevPage, prevPage, page_links, skip, currentPage = 0, previous = 0, lastPage = 0, page = 0, limit = 0;
         page = parseInt(pageis);
@@ -61,7 +71,7 @@ function PaginationData(data, total, limitis, pageis) {
     }
 
 }
-function generateRandomString(l = 0) {
+export function generateRandomString(l = 0) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let result = '';
     for (let i = 0; i < l; i++) {
@@ -69,11 +79,11 @@ function generateRandomString(l = 0) {
     }
     return result;
 }
-function storageFolderPath() {
+export function storageFolderPath() {
     return path.join(__dirname, './../storage/');
 }
 
-async function FileInfo(file_name, file_path, file_view_path) {
+export async function FileInfo(file_name, file_path, file_view_path) {
     try {
         if (file_name == "" || file_name == undefined || file_name == null) return { filetype_st: '', filetype: '', filesize: '', filename: '', file_path: '', file_view_path: '' };
         if (fs.existsSync(`${file_path}`)) {
@@ -90,7 +100,7 @@ async function FileInfo(file_name, file_path, file_view_path) {
         throw new Error(error);
     }
 }
-async function DeleteFile(filePath) {
+export async function DeleteFile(filePath) {
     try {
         if (filePath == "" || filePath == undefined || filePath == null) return false;
         if (fs.existsSync(`${filePath}`)) {
@@ -105,7 +115,7 @@ async function DeleteFile(filePath) {
         throw new Error(error.message);
     }
 }
-async function FileExists(filePath) {
+export async function FileExists(filePath) {
     try {
         if (filePath == "" || filePath == undefined || filePath == null) return false;
         if (fs.existsSync(filePath)) {
@@ -118,7 +128,7 @@ async function FileExists(filePath) {
     }
 }
 
-const data_decrypt = async (encryptedData) => {
+export async function data_decrypt(encryptedData) {
     const iv = CryptoJS.enc.Utf8.parse(data_ivString);
     const key = CryptoJS.enc.Utf8.parse(data_secretKey);
     const decrypted = CryptoJS.AES.decrypt(encryptedData, key, {
@@ -131,7 +141,7 @@ const data_decrypt = async (encryptedData) => {
 };
 
 
-const data_encrypt = async (data) => {
+export async function data_encrypt(data) {
     const iv = CryptoJS.enc.Utf8.parse(data_ivString);
     const key = CryptoJS.enc.Utf8.parse(data_secretKey);
     const encrypted = CryptoJS.AES.encrypt(data, key, {
@@ -141,4 +151,3 @@ const data_encrypt = async (data) => {
     });
     return encrypted.toString();
 };
-module.exports = { PaginationData, storageFolderPath, generateRandomString, FileInfo, DeleteFile, FileExists, data_decrypt, data_encrypt };

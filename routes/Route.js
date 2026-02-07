@@ -1,16 +1,19 @@
-const express = require("express");
-const routeapp = new express.Router();
-const AgeAuth = require("./../middleware/AgeAuth");
-const Auth = require("./../middleware/Auth");
-const Mycontroller = require("./../Controllers/Mycontroller");
-const Blogcontroller = require("./../Controllers/Blogcontroller");
-const Homepagecontroller = require("./../Controllers/Homepagecontroller");
-const FindFriends = require("./../Controllers/FindFriends");
-const AllNotificationController = require("./../Controllers/AllNotificationController");
-const UsersFriendRequestController = require("./../Controllers/UsersFriendRequestController");
-const VideoPlayerController = require("./../Controllers/VideoPlayerController");
-const ChatController = require("./../Controllers/ChatController");
-const Healper = require('./../Controllers/Healper');
+import express from "express";
+
+// import AgeAuth from "../middleware/AgeAuth.js";
+import Auth from "../middleware/Auth.js";
+
+import { CreateUser, Userlogin, UserLogout, UpdateUser, UpdateUserPhoto, Users, UserByid, CkeditorfileUpload } from "../Controllers/Mycontroller.js";
+import { BlogsCategoryList, UplodePhoto, UplodeThumbnail, BlogByAlias, UpdateBlog, LikeAndDislike, UserComment, Comment, CommentList, hideComments, UpdateBlogArchive, ShareBlog, ShareBlogToFriends, LikeAndDislikeOnSharePost, CommentOnSharePost, UpdateBlogSetting, ShareList, UpdateBlogPublishStatus, CreactBlog, Myblogs, DeleteBlogByid, BlogByid } from "../Controllers/Blogcontroller.js";
+import { Allblogs } from "../Controllers/Homepagecontroller.js";
+import { AllUsers, MyFriends, MyFriendsForShare, FriendRequestSendList, NewFriendRequestList } from "../Controllers/FindFriends.js";
+import { AllNotifications, ReadThis, ClearAll } from "../Controllers/AllNotificationController.js";
+import { SendRequest, CencelRequest, AcceptOrRejectRequest, DeleteFriend } from "../Controllers/UsersFriendRequestController.js";
+import { NodeJSStreams, NodeJSStreams_OLD, VideothumbnailNew, VideothumbnailV2, VideothumbnailMetaData } from "../Controllers/VideoPlayerController.js";
+import { UploadChatFile, SaveChat, ChatList, FindChat, UpdateUnreadMessage } from "../Controllers/ChatController.js";
+import { PaginationData, generateRandomString, storageFolderPath, FileInfo, DeleteFile, FileExists, data_decrypt, data_encrypt } from "../Controllers/Healper.js";
+
+const routeapp = express.Router();
 // const { Server } = require("@tus/server");
 // const { FileStore } = require("@tus/file-store");
 // const tusServer = new Server({
@@ -19,64 +22,81 @@ const Healper = require('./../Controllers/Healper');
 //         directory: `${Healper.storageFolderPath()}uploads`
 //     })
 // });
-routeapp.get('/', async (req, resp) => {
-    return resp.status(200).json({ "status": 200, "message": "Success" });
-})
-routeapp.post('/create-user', Mycontroller.CreateUser)
-routeapp.post('/user-login', Mycontroller.Userlogin)
-routeapp.post('/user-logout', Auth, Mycontroller.UserLogout)
-routeapp.post('/update-user', Auth, Mycontroller.UpdateUser)
-routeapp.post('/update-user-photo', Auth, Mycontroller.UpdateUserPhoto)
-routeapp.get('/users', Auth, Mycontroller.Users)
-routeapp.post('/user-byid/:id', Auth, Mycontroller.UserByid)
-routeapp.post('/blog-cetegory-list', Auth, Blogcontroller.BlogsCategoryList)
-routeapp.post('/upload-blog-images', Auth, Blogcontroller.UplodePhoto)
-routeapp.post('/upload-blog-thumbnail', Auth, Blogcontroller.UplodeThumbnail)
-routeapp.post('/create-blog', Auth, Blogcontroller.CreactBlog)
-routeapp.post('/my-blogs', Auth, Blogcontroller.Myblogs)
-routeapp.post('/ckeditor', Auth, Mycontroller.CkeditorfileUpload)
-routeapp.post('/delete-blogs/:id', Auth, Blogcontroller.DeleteBlogByid)
-routeapp.post('/blog-byid/:id', Auth, Blogcontroller.BlogByid)
-routeapp.post('/blog-byalias/:id', Auth, Blogcontroller.BlogByAlias)
-routeapp.post('/update-blog', Auth, Blogcontroller.UpdateBlog)
-routeapp.post('/all-blogs', Auth, Homepagecontroller.Allblogs)
-routeapp.post('/find-friends', Auth, FindFriends.AllUsers)
-routeapp.post('/my-friends', Auth, FindFriends.MyFriends)
-routeapp.post('/my-friends-for-share', Auth, FindFriends.MyFriendsForShare)
-routeapp.post('/friend-rquest-already-send', Auth, FindFriends.FriendRequestSendList)
-routeapp.post('/new-friend-request-list', Auth, FindFriends.NewFriendRequestList)
-routeapp.post('/send-request', Auth, UsersFriendRequestController.SendRequest)
-routeapp.post('/cencel-request', Auth, UsersFriendRequestController.CencelRequest)
-routeapp.post('/accept-or-reject-request', Auth, UsersFriendRequestController.AcceptOrRejectRequest)
-routeapp.post('/delete-friend', Auth, UsersFriendRequestController.DeleteFriend)
-routeapp.post('/all-notifications', Auth, AllNotificationController.AllNotifications)
-routeapp.post('/read-notification', Auth, AllNotificationController.ReadThis)
-routeapp.get("/video-player", Auth, VideoPlayerController.NodeJSStreams);//video blob url
-routeapp.get("/video", VideoPlayerController.NodeJSStreams_OLD);
-routeapp.post('/upload-chat-file', Auth, ChatController.UploadChatFile);
-routeapp.post("/save-user-chat", Auth, ChatController.SaveChat);
-routeapp.post('/chat-list', Auth, ChatController.ChatList);
-routeapp.post('/find-chat', Auth, ChatController.FindChat);
-routeapp.post("/update-read-status", Auth, ChatController.UpdateUnreadMessage);
-routeapp.post("/clear-all-notifications", Auth, AllNotificationController.ClearAll);
-routeapp.post("/video-thumbnail", Auth, VideoPlayerController.VideothumbnailNew);
-routeapp.get("/video-thumbnail-v2", VideoPlayerController.VideothumbnailV2);
-routeapp.post("/video-thumbnail-metadata", Auth, VideoPlayerController.VideothumbnailMetaData);
-routeapp.post("/like-and-dislike", Auth, Blogcontroller.LikeAndDislike);
-routeapp.post("/user-blog-comment", Auth, Blogcontroller.UserComment);
-routeapp.post("/blog-comment", Auth, Blogcontroller.Comment);
-routeapp.post("/blog-comment-list", Auth, Blogcontroller.CommentList);
-routeapp.post("/hide-blog-comment", Auth, Blogcontroller.hideComments);
-routeapp.post("/update-blog-archive", Auth, Blogcontroller.UpdateBlogArchive);
-routeapp.post("/share-blog", Auth, Blogcontroller.ShareBlog);
-routeapp.post("/share-blog-to-friends", Auth, Blogcontroller.ShareBlogToFriends);
-routeapp.post("/like-and-dislike-on-sharepost", Auth, Blogcontroller.LikeAndDislikeOnSharePost);
-routeapp.post("/comment-on-sharepost", Auth, Blogcontroller.CommentOnSharePost);
-routeapp.post("/update-blog-settings", Auth, Blogcontroller.UpdateBlogSetting);
-routeapp.post("/blog-share-list", Auth, Blogcontroller.ShareList);
-routeapp.post('/update-blog-publish-status', Auth, Blogcontroller.UpdateBlogPublishStatus)
-// routeapp.post('/upload-blog-video', tusServer.handle.bind(tusServer))
-routeapp.all(/.*/, async (req, res) => {
-    res.status(404).json({ status: 404, message: "route not found..!!" });
+routeapp.get("/", async (req, resp) => {
+    return resp.status(200).json({
+        status: 200,
+        message: "Success"
+    });
 });
-module.exports = routeapp;
+
+routeapp.post("/create-user", CreateUser);
+routeapp.post("/user-login", Userlogin);
+routeapp.post("/user-logout", Auth, UserLogout);
+routeapp.post("/update-user", Auth, UpdateUser);
+routeapp.post("/update-user-photo", Auth, UpdateUserPhoto);
+routeapp.get("/users", Auth, Users);
+routeapp.post("/user-byid/:id", Auth, UserByid);
+
+routeapp.post("/blog-cetegory-list", Auth, BlogsCategoryList);
+routeapp.post("/upload-blog-images", Auth, UplodePhoto);
+routeapp.post("/upload-blog-thumbnail", Auth, UplodeThumbnail);
+routeapp.post("/create-blog", Auth, CreactBlog);
+routeapp.post("/my-blogs", Auth, Myblogs);
+routeapp.post("/ckeditor", Auth, CkeditorfileUpload);
+routeapp.post("/delete-blogs/:id", Auth, DeleteBlogByid);
+routeapp.post("/blog-byid/:id", Auth, BlogByid);
+routeapp.post("/blog-byalias/:id", Auth, BlogByAlias);
+routeapp.post("/update-blog", Auth, UpdateBlog);
+routeapp.post("/all-blogs", Auth, Allblogs);
+
+routeapp.post("/find-friends", Auth, AllUsers);
+routeapp.post("/my-friends", Auth, MyFriends);
+routeapp.post("/my-friends-for-share", Auth, MyFriendsForShare);
+routeapp.post("/friend-rquest-already-send", Auth, FriendRequestSendList);
+routeapp.post("/new-friend-request-list", Auth, NewFriendRequestList);
+
+routeapp.post("/send-request", Auth, SendRequest);
+routeapp.post("/cencel-request", Auth, CencelRequest);
+routeapp.post("/accept-or-reject-request", Auth, AcceptOrRejectRequest);
+routeapp.post("/delete-friend", Auth, DeleteFriend);
+
+routeapp.post("/all-notifications", Auth, AllNotifications);
+routeapp.post("/read-notification", Auth, ReadThis);
+routeapp.post("/clear-all-notifications", Auth, ClearAll);
+
+routeapp.get("/video-player", Auth, NodeJSStreams);
+routeapp.get("/video", NodeJSStreams_OLD);
+
+routeapp.post("/upload-chat-file", Auth, UploadChatFile);
+routeapp.post("/save-user-chat", Auth, SaveChat);
+routeapp.post("/chat-list", Auth, ChatList);
+routeapp.post("/find-chat", Auth, FindChat);
+routeapp.post("/update-read-status", Auth, UpdateUnreadMessage);
+
+routeapp.post("/video-thumbnail", Auth, VideothumbnailNew);
+routeapp.get("/video-thumbnail-v2", VideothumbnailV2);
+routeapp.post("/video-thumbnail-metadata", Auth, VideothumbnailMetaData);
+
+routeapp.post("/like-and-dislike", Auth, LikeAndDislike);
+routeapp.post("/user-blog-comment", Auth, UserComment);
+routeapp.post("/blog-comment", Auth, Comment);
+routeapp.post("/blog-comment-list", Auth, CommentList);
+routeapp.post("/hide-blog-comment", Auth, hideComments);
+routeapp.post("/update-blog-archive", Auth, UpdateBlogArchive);
+routeapp.post("/share-blog", Auth, ShareBlog);
+routeapp.post("/share-blog-to-friends", Auth, ShareBlogToFriends);
+routeapp.post("/like-and-dislike-on-sharepost", Auth, LikeAndDislikeOnSharePost);
+routeapp.post("/comment-on-sharepost", Auth, CommentOnSharePost);
+routeapp.post("/update-blog-settings", Auth, UpdateBlogSetting);
+routeapp.post("/blog-share-list", Auth, ShareList);
+routeapp.post("/update-blog-publish-status", Auth, UpdateBlogPublishStatus);
+
+// 404 handler
+routeapp.all(/.*/, async (req, res) => {
+    res.status(404).json({
+        status: 404,
+        message: "route not found..!!"
+    });
+});
+
+export default routeapp;

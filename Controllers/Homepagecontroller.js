@@ -1,9 +1,12 @@
-const moment = require('moment-timezone');
-const BlogsModel = require('../Models/BlogsModel');
-const Healper = require('./Healper');
-const mongodb = require('mongodb');
+// import dotenv from "dotenv";
+// dotenv.config();
+import moment from "moment-timezone";
+import BlogsModel from "../Models/BlogsModel.js";
+import { PaginationData, generateRandomString, storageFolderPath, FileInfo, DeleteFile, FileExists, data_decrypt, data_encrypt } from "./Healper.js";
+import mongodb from "mongodb";
+
 const APP_STORAGE = process.env.APP_STORAGE;
-async function Allblogs(req, resp) {
+export async function Allblogs(req, resp) {
     try {
         let { limit = 5, page = 1 } = req.query;
         let { title = '', user_id = '', is_archive = '' } = req.body;
@@ -391,35 +394,35 @@ async function Allblogs(req, resp) {
         let resetdata_is = await Promise.all(
             list.map(async element => {
                 let file_name = `${element.photo}`;
-                let file_path = `${Healper.storageFolderPath()}user-blogs/${file_name}`;
+                let file_path = `${storageFolderPath()}user-blogs/${file_name}`;
                 let file_view_path = `${APP_STORAGE}user-blogs/${file_name}`;
-                let file_dtl = await Healper.FileInfo(file_name, file_path, file_view_path);
+                let file_dtl = await FileInfo(file_name, file_path, file_view_path);
 
                 let user_file_name = `${element.user_photo}`;
-                let user_file_path = `${Healper.storageFolderPath()}users/${user_file_name}`;
+                let user_file_path = `${storageFolderPath()}users/${user_file_name}`;
                 let user_file_view_path = `${APP_STORAGE}users/${user_file_name}`;
-                let user_file_dtl = await Healper.FileInfo(user_file_name, user_file_path, user_file_view_path);
+                let user_file_dtl = await FileInfo(user_file_name, user_file_path, user_file_view_path);
 
                 let thumbnail_name = `${element.thumbnail}`;
-                let thumbnail_path = `${Healper.storageFolderPath()}user-blogs/thumbnail/${thumbnail_name}`;
+                let thumbnail_path = `${storageFolderPath()}user-blogs/thumbnail/${thumbnail_name}`;
                 let thumbnail_view_path = `${APP_STORAGE}user-blogs/thumbnail/${thumbnail_name}`;
-                let thumbnail_dtl = await Healper.FileInfo(thumbnail_name, thumbnail_path, thumbnail_view_path);
+                let thumbnail_dtl = await FileInfo(thumbnail_name, thumbnail_path, thumbnail_view_path);
 
 
                 let file_name1 = `${element.share_photo}`;
-                let file_path1 = `${Healper.storageFolderPath()}user-blogs/${file_name1}`;
+                let file_path1 = `${storageFolderPath()}user-blogs/${file_name1}`;
                 let file_view_path1 = `${APP_STORAGE}user-blogs/${file_name1}`;
-                let file_dtl1 = await Healper.FileInfo(file_name1, file_path1, file_view_path1);
+                let file_dtl1 = await FileInfo(file_name1, file_path1, file_view_path1);
 
                 let user_file_name1 = `${element.share_user_photo}`;
-                let user_file_path1 = `${Healper.storageFolderPath()}users/${user_file_name1}`;
+                let user_file_path1 = `${storageFolderPath()}users/${user_file_name1}`;
                 let user_file_view_path1 = `${APP_STORAGE}users/${user_file_name1}`;
-                let user_file_dtl1 = await Healper.FileInfo(user_file_name1, user_file_path1, user_file_view_path1);
+                let user_file_dtl1 = await FileInfo(user_file_name1, user_file_path1, user_file_view_path1);
 
                 let thumbnail_name1 = `${element.share_thumbnail}`;
-                let thumbnail_path1 = `${Healper.storageFolderPath()}user-blogs/thumbnail/${thumbnail_name1}`;
+                let thumbnail_path1 = `${storageFolderPath()}user-blogs/thumbnail/${thumbnail_name1}`;
                 let thumbnail_view_path1 = `${APP_STORAGE}user-blogs/thumbnail/${thumbnail_name1}`;
-                let thumbnail_dtl1 = await Healper.FileInfo(thumbnail_name1, thumbnail_path1, thumbnail_view_path1);
+                let thumbnail_dtl1 = await FileInfo(thumbnail_name1, thumbnail_path1, thumbnail_view_path1);
 
                 return {
                     ...element,
@@ -466,5 +469,3 @@ async function Allblogs(req, resp) {
         return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
     }
 }
-
-module.exports = { Allblogs };
