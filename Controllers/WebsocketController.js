@@ -12,7 +12,7 @@ const new_client = process.env.new_client;
 const client_disconnected = process.env.client_disconnected;
 const new_message_receive = process.env.new_message_receive;
 const receive_binary_data = process.env.receive_binary_data;
-
+const user_is_typing = process.env.user_is_typing;
 const clients = {};
 
 function originIsAllowed(origin) {
@@ -81,6 +81,11 @@ const runWsServer = async () => {
                         clients[jsonpars.to].sendUTF(JSON.stringify(jsonpars));
                     }
                 } else if (jsonpars?.code == 'ice-candidate') {
+                    jsonpars = { ...jsonpars }
+                    if (jsonpars.to) {
+                        clients[jsonpars.to].sendUTF(JSON.stringify(jsonpars));
+                    }
+                } else if (jsonpars?.code == user_is_typing) {
                     jsonpars = { ...jsonpars }
                     if (jsonpars.to) {
                         clients[jsonpars.to].sendUTF(JSON.stringify(jsonpars));
