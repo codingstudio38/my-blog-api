@@ -74,15 +74,6 @@ BlogSchema.methods.FindAll = async function (query = {}, limit = 10, skip = 0, s
             .model("blogs")
             .find(query)
             .countDocuments();
-        // const all_columns = Object.keys(BlogsModel.schema.paths);
-        // let data_reset = [];
-        // data.forEach((item) => {
-        //     let obj = {};
-        //     all_columns.forEach((col) => {
-        //         obj[col] = item[col] ? item[col] : "";
-        //     });
-        //     data_reset.push(obj);
-        // });
         return { data, total };
     } catch (error) {
         throw new Error(error);
