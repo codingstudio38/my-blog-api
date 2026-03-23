@@ -3150,3 +3150,37 @@ export async function UploadBlogVideo(req, resp) {
         return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
     }
 }
+
+
+export async function GetDataFromModal(req, resp) {
+    try {
+        let { limit = 5, page = 1 } = req.query;
+        let { title = '', user_id = '' } = req.query;
+        let sort = { _id: -1 };
+        let skip = 0;
+        limit = parseInt(limit);
+        page = parseInt(page);
+        skip = (page - 1) * limit;
+        let andConditions = [];
+
+        if (title !== '') {
+            andConditions.push({ title: { $regex: new RegExp(title, "i") } });
+        }
+        if (user_id !== '') {
+            andConditions.push({ user_id: new mongodb.ObjectId(user_id) });
+        }
+        andConditions.push({ delete: 0 });
+        let query = andConditions.length > 0 ? { $and: andConditions } : {};
+
+        const blogsmodel = new BlogsModel();
+        const res = await blogsmodel.FindAll(query, limit, skip, sort, {});
+
+        let resetdata_is = res.data;
+        let total = res.total;
+        let data = PaginationData(resetdata_is, total, limit, page);
+
+        return resp.status(200).json({ "status": 200, "message": "Success", 'result': data });
+    } catch (error) {
+        return resp.status(500).json({ "status": 500, "message": error.message, 'result': {} });
+    }
+}

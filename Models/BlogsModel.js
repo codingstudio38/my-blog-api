@@ -47,7 +47,47 @@ BlogSchema.methods.findByBlogId = async function (id) {
         throw new Error(error);
     }
 };
+BlogSchema.methods.FindAll = async function (query = {}, limit = 10, skip = 0, sort = {}, select = {}) {
+    try {
+        let select_length = Object.keys(select).length;
+        let project = {};
+        if (select_length <= 0) {
+            project = { __v: 1, _id: 1 };
+            const all_columns = Object.keys(BlogSchema.obj);//Object.keys(BlogsModel.schema.paths); 
+            all_columns.forEach((col) => {
+                project[col] = { $ifNull: [`$${col}`, ""] };
+            });
+        } else {
+            project = select;
+        }
 
+        const data = await mongoose
+            .model("blogs")
+            .aggregate([
+                { $match: query },
+                { $sort: sort == false ? { _id: -1 } : sort },
+                { $skip: skip },
+                { $limit: limit },
+                { $project: project },
+            ])
+        let total = await mongoose
+            .model("blogs")
+            .find(query)
+            .countDocuments();
+        // const all_columns = Object.keys(BlogsModel.schema.paths);
+        // let data_reset = [];
+        // data.forEach((item) => {
+        //     let obj = {};
+        //     all_columns.forEach((col) => {
+        //         obj[col] = item[col] ? item[col] : "";
+        //     });
+        //     data_reset.push(obj);
+        // });
+        return { data, total };
+    } catch (error) {
+        throw new Error(error);
+    }
+};
 const BlogsModel = mongooseConnect.model("blogs", BlogSchema);
 
 export default BlogsModel;

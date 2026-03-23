@@ -4,7 +4,7 @@ import express from "express";
 import Auth from "../middleware/Auth.js";
 
 import { CreateUser, Userlogin, UserLogout, UpdateUser, UpdateUserPhoto, Users, UserByid, CkeditorfileUpload } from "../Controllers/Mycontroller.js";
-import { BlogsCategoryList, UplodePhoto, UplodeThumbnail, BlogByAlias, UpdateBlog, LikeAndDislike, UserComment, Comment, CommentList, hideComments, UpdateBlogArchive, ShareBlog, ShareBlogToFriends, LikeAndDislikeOnSharePost, CommentOnSharePost, UpdateBlogSetting, ShareList, UpdateBlogPublishStatus, CreactBlog, Myblogs, DeleteBlogByid, BlogByid } from "../Controllers/Blogcontroller.js";
+import { BlogsCategoryList, UplodePhoto, UplodeThumbnail, BlogByAlias, UpdateBlog, LikeAndDislike, UserComment, Comment, CommentList, hideComments, UpdateBlogArchive, ShareBlog, ShareBlogToFriends, LikeAndDislikeOnSharePost, CommentOnSharePost, UpdateBlogSetting, ShareList, UpdateBlogPublishStatus, CreactBlog, Myblogs, DeleteBlogByid, BlogByid, GetDataFromModal } from "../Controllers/Blogcontroller.js";
 import { Allblogs } from "../Controllers/Homepagecontroller.js";
 import { AllUsers, MyFriends, MyFriendsForShare, FriendRequestSendList, NewFriendRequestList } from "../Controllers/FindFriends.js";
 import { AllNotifications, ReadThis, ClearAll } from "../Controllers/AllNotificationController.js";
@@ -90,6 +90,7 @@ routeapp.post("/comment-on-sharepost", Auth, CommentOnSharePost);
 routeapp.post("/update-blog-settings", Auth, UpdateBlogSetting);
 routeapp.post("/blog-share-list", Auth, ShareList);
 routeapp.post("/update-blog-publish-status", Auth, UpdateBlogPublishStatus);
+routeapp.get("/get-data-from-modal", GetDataFromModal);
 
 // 404 handler
 routeapp.all(/.*/, async (req, res) => {
