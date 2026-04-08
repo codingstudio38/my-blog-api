@@ -252,7 +252,7 @@ export async function VideothumbnailV2(req, resp) {
     // 2.b->Extract and copy bin folder path
     // 2.c->Set Environment variable in system settings
     // 3->Restart VS code or system
-    //http://10.144.4.53:5000/video-thumbnail-v2?watch=HFsJIh%2BHvUGyRMqxujT00%2F%2BgvnZlX%2Fr%2Fiqc0Du4Fn%2Bw%3D
+    //http://10.115.8.53:5000/video-thumbnail-v2?watch=HFsJIh%2BHvUGyRMqxujT00%2F%2BgvnZlX%2Fr%2Fiqc0Du4Fn%2Bw%3D
     try {
         let { watch = '' } = req.query;
         let sec = 2, total = 0, data = {};
@@ -297,94 +297,6 @@ export async function VideothumbnailV2(req, resp) {
         return resp.status(500).json({ error: err.message });
     }
 }
-
-export async function generateThumbnails(video, output) {
-    try {
-        await new Promise((resolve, reject) => {
-            ffmpeg(video)
-                .output(`${output}/thumb_%04d.jpg`)
-                .outputOptions([
-                    '-vf fps=1',       // 1 thumbnail per second
-                    // '-qscale:v 2'
-                ])
-                .on('end', resolve)
-                .on('error', reject)
-                .run();
-        });
-        return true;
-    } catch (error) {
-        throw new Error(error);
-    }
-}
-
-export async function generateSprite(video, output, blog) {
-    try {
-        const
-            thumbWidth = 160,
-            thumbHeight = 90,
-            interval = 1,
-            spriteUrl = `${APP_STORAGE}user-blogs/video-thumbnails${blog._id}/sprite.jpg`;
-        ;
-        const thumbs = fs.readdirSync(output).filter(f => f.startsWith('thumb_') && f.endsWith('.jpg'));
-        if (!thumbs.length) {
-            throw new Error('No thumbnails found to generate sprite');
-        }
-        const count = thumbs.length;
-
-        const cols = Math.ceil(Math.sqrt(count));
-        const rows = Math.ceil(count / cols);
-        await new Promise((resolve, reject) => {
-            ffmpeg()
-                .input(path.join(output, 'thumb_%04d.jpg'))
-                .inputOptions([
-                    '-pattern_type sequence',
-                    '-framerate 1'
-                ])
-                .outputOptions([
-                    `-vf scale=${thumbWidth}:${thumbHeight},tile=${cols}x${rows}`,
-                    '-frames:v 1'
-                    // '-qscale:v 2'
-                ])
-                .output(path.join(output, 'sprite.jpg'))
-                .on('end', resolve)
-                .on('error', reject)
-                .run();
-        });
-        // Generate metadata
-        const frames = {};
-        for (let i = 0; i < count; i++) {
-            const col = i % cols;
-            const row = Math.floor(i / cols);
-
-            frames[i] = {
-                x: -(col * thumbWidth),
-                y: -(row * thumbHeight)
-            };
-        }
-
-        const metadata = {
-            thumbWidth,
-            thumbHeight,
-            interval,
-            columns: cols,
-            rows,
-            count,
-            spriteUrl,
-            frames
-        };
-        fs.writeFileSync(path.join(output, 'sprite.json'), JSON.stringify(metadata, null, 2));
-        thumbs.forEach((files) => {
-            let f = `${output}/${files}`;
-            if (fs.existsSync(f)) {
-                fs.unlinkSync(f);
-            }
-        })
-        return metadata;
-    } catch (error) {
-        throw new Error(error);
-    }
-}
-
 export async function generateMultipleSprite(video, output, blog) {
     const thumbWidth = 160;
     const thumbHeight = 90;
@@ -481,6 +393,92 @@ export async function generateMultipleSprite(video, output, blog) {
     return metadata;
 }
 
+export async function generateThumbnails(video, output) {
+    try {
+        await new Promise((resolve, reject) => {
+            ffmpeg(video)
+                .output(`${output}/thumb_%04d.jpg`)
+                .outputOptions([
+                    '-vf fps=1',       // 1 thumbnail per second
+                    // '-qscale:v 2'
+                ])
+                .on('end', resolve)
+                .on('error', reject)
+                .run();
+        });
+        return true;
+    } catch (error) {
+        throw new Error(error);
+    }
+}
+
+export async function generateSprite(video, output, blog) {
+    try {
+        const
+            thumbWidth = 160,
+            thumbHeight = 90,
+            interval = 1,
+            spriteUrl = `${APP_STORAGE}user-blogs/video-thumbnails${blog._id}/sprite.jpg`;
+        ;
+        const thumbs = fs.readdirSync(output).filter(f => f.startsWith('thumb_') && f.endsWith('.jpg'));
+        if (!thumbs.length) {
+            throw new Error('No thumbnails found to generate sprite');
+        }
+        const count = thumbs.length;
+
+        const cols = Math.ceil(Math.sqrt(count));
+        const rows = Math.ceil(count / cols);
+        await new Promise((resolve, reject) => {
+            ffmpeg()
+                .input(path.join(output, 'thumb_%04d.jpg'))
+                .inputOptions([
+                    '-pattern_type sequence',
+                    '-framerate 1'
+                ])
+                .outputOptions([
+                    `-vf scale=${thumbWidth}:${thumbHeight},tile=${cols}x${rows}`,
+                    '-frames:v 1'
+                    // '-qscale:v 2'
+                ])
+                .output(path.join(output, 'sprite.jpg'))
+                .on('end', resolve)
+                .on('error', reject)
+                .run();
+        });
+        // Generate metadata
+        const frames = {};
+        for (let i = 0; i < count; i++) {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+
+            frames[i] = {
+                x: -(col * thumbWidth),
+                y: -(row * thumbHeight)
+            };
+        }
+
+        const metadata = {
+            thumbWidth,
+            thumbHeight,
+            interval,
+            columns: cols,
+            rows,
+            count,
+            spriteUrl,
+            frames
+        };
+        fs.writeFileSync(path.join(output, 'sprite.json'), JSON.stringify(metadata, null, 2));
+        thumbs.forEach((files) => {
+            let f = `${output}/${files}`;
+            if (fs.existsSync(f)) {
+                fs.unlinkSync(f);
+            }
+        })
+        return metadata;
+    } catch (error) {
+        throw new Error(error);
+    }
+}
 
 export async function VideothumbnailMetaData(req, resp) {
     try {
