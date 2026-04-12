@@ -501,3 +501,37 @@ export async function VideothumbnailMetaData(req, resp) {
         return resp.status(500).json({ status: 500, message: err.message });
     }
 }
+
+export async function UploadVideoInChunks(req, res) {
+    try {
+        if (req.files == undefined || req.files.file == undefined) {
+            return res.status(500).json({ status: 500, message: 'No file uploaded' });
+        }
+        // This is a simplified example. In production, you should handle edge cases, errors, and security concerns.
+        const file = req.files.file;
+        const fileName = req.body["fileName"];
+        const totalChunks = req.body["totalChunks"];
+        const chunkIndex = req.body["chunkIndex"];
+        // console.clear();
+        // console.log(file)
+
+        // const fileName = req.headers["filename"];
+        // const chunkIndex = req.headers["index"];
+        let uploadpath = `${storageFolderPath()}large-uploads/`;
+        if (!fs.existsSync(uploadpath)) {
+            fs.mkdirSync(uploadpath, { recursive: true });
+        }
+        return res.status(200).json({ status: 200, message: 'success' });
+        const writeStream = fs.createWriteStream(`${uploadpath}/${fileName}`, {
+            flags: "a" // append mode
+        });
+        req.pipe(writeStream);
+        req.on("end", () => {
+            return res.status(200).send({ status: 200, message: "success" });
+        });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: error.message });
+    }
+
+}
+

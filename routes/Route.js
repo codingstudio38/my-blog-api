@@ -9,7 +9,7 @@ import { Allblogs } from "../Controllers/Homepagecontroller.js";
 import { AllUsers, MyFriends, MyFriendsForShare, FriendRequestSendList, NewFriendRequestList } from "../Controllers/FindFriends.js";
 import { AllNotifications, ReadThis, ClearAll } from "../Controllers/AllNotificationController.js";
 import { SendRequest, CencelRequest, AcceptOrRejectRequest, DeleteFriend } from "../Controllers/UsersFriendRequestController.js";
-import { NodeJSStreams, NodeJSStreams_OLD, VideothumbnailNew, VideothumbnailV2, VideothumbnailMetaData } from "../Controllers/VideoPlayerController.js";
+import { NodeJSStreams, NodeJSStreams_OLD, VideothumbnailNew, VideothumbnailV2, VideothumbnailMetaData, UploadVideoInChunks } from "../Controllers/VideoPlayerController.js";
 import { UploadChatFile, SaveChat, ChatList, FindChat, UpdateUnreadMessage } from "../Controllers/ChatController.js";
 import { PaginationData, generateRandomString, storageFolderPath, FileInfo, DeleteFile, FileExists, data_decrypt, data_encrypt } from "../Controllers/Healper.js";
 
@@ -91,6 +91,8 @@ routeapp.post("/update-blog-settings", Auth, UpdateBlogSetting);
 routeapp.post("/blog-share-list", Auth, ShareList);
 routeapp.post("/update-blog-publish-status", Auth, UpdateBlogPublishStatus);
 routeapp.get("/get-data-from-modal", GetDataFromModal);
+
+routeapp.post("/upload-large-file", UploadVideoInChunks);
 
 // 404 handler
 routeapp.all(/.*/, async (req, res) => {
