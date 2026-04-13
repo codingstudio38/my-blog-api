@@ -21,7 +21,7 @@ export async function SendRequest(req, resp) {
         if (!user_id) {
             return resp.status(200).json({ 'status': 400, 'message': 'user id required.' });
         }
-        from = user_id;
+        let from = user_id;
         if (!to) {
             return resp.status(200).json({ 'status': 400, 'message': 'to id required.' });
         }

@@ -10,7 +10,9 @@ import ffmpegPath from "ffmpeg-static";
 import { Worker } from "worker_threads";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-
+import crypto from "crypto";
+import moment from "moment-timezone";
+import { set } from "mongoose";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const APP_STORAGE = process.env.APP_STORAGE;
@@ -252,7 +254,7 @@ export async function VideothumbnailV2(req, resp) {
     // 2.b->Extract and copy bin folder path
     // 2.c->Set Environment variable in system settings
     // 3->Restart VS code or system
-    //http://10.115.8.53:5000/video-thumbnail-v2?watch=HFsJIh%2BHvUGyRMqxujT00%2F%2BgvnZlX%2Fr%2Fiqc0Du4Fn%2Bw%3D
+    //http://192.168.61.155:5000/video-thumbnail-v2?watch=TJFzv7%2FNJ2JC7fSq7SMEmw%3D%3D
     try {
         let { watch = '' } = req.query;
         let sec = 2, total = 0, data = {};
@@ -511,24 +513,107 @@ export async function UploadVideoInChunks(req, res) {
         const file = req.files.file;
         const fileName = req.body["fileName"];
         const totalChunks = req.body["totalChunks"];
-        const chunkIndex = req.body["chunkIndex"];
+        const current_chunk = req.body["chunkIndex"];
+        const userid = req.body["userid"];
+        let before_file_uploaded = false;
+
+        let folder_name = fileName.trim().toLowerCase();
+        folder_name = folder_name.replaceAll(' ', "_")
+            .replaceAll('.', "_").replaceAll('-', "_").replaceAll(',', "_").replaceAll('/', "_").replaceAll('\\', "_").replaceAll('(', "_")
+            .replaceAll(')', "_").replaceAll('#', "_").replaceAll('%', "_").replaceAll('@', "_").replaceAll('!', "_").replaceAll('$', "_")
+            .replaceAll('&', "_").replaceAll('*', "_").replaceAll('+', "_").replaceAll('=', "_").replaceAll('?', "_").replaceAll('^', "_")
+            .replaceAll('`', "_").replaceAll('~', "_").replaceAll('{', "_").replaceAll('}', "_").replaceAll('[', "_").replaceAll(']', "_")
+            .replaceAll('|', "_").replaceAll('||', "_").replaceAll("'", "_").replaceAll("\"", "_").replaceAll("<", "_").replaceAll(">", "_")
+            .replaceAll(";", "_").replaceAll(":", "_");
+        // console.clear();
+        // console.log(folder_name);
+
         // console.clear();
         // console.log(file)
-
         // const fileName = req.headers["filename"];
-        // const chunkIndex = req.headers["index"];
-        let uploadpath = `${storageFolderPath()}large-uploads/`;
+        // const current_chunk = req.headers["index"];
+
+        const file_n = fileName.split(".");
+        let file_type = file_n[file_n.length - 1];
+        let file_mimetype = file.mimetype;
+        let file_new_name = `${crypto.randomBytes(8).toString('hex')}.${file_type}`;
+
+        let uploadpath = `${storageFolderPath()}large-uploads/${userid}/${folder_name}/`;
+
         if (!fs.existsSync(uploadpath)) {
             fs.mkdirSync(uploadpath, { recursive: true });
         }
-        return res.status(200).json({ status: 200, message: 'success' });
-        const writeStream = fs.createWriteStream(`${uploadpath}/${fileName}`, {
-            flags: "a" // append mode
+
+        const json_file_path = path.join(uploadpath, `${folder_name}.json`);
+        let previous_metadata = {
+            totalchunks: 0,
+            uploadedchunk: 0,
+            date_time: new Date(),
+            fileName: '',
+            chunk_indexs: [],
+        }
+        if (fs.existsSync(json_file_path)) {
+            previous_metadata = await fs.readFileSync(json_file_path, 'utf8');
+            previous_metadata = JSON.parse(previous_metadata);
+            if (previous_metadata.totalchunks == totalChunks && previous_metadata.fileName == fileName) {// if current total chunks is same as previous total chunks then only we can check about already uploaded chunk otherwise we have to upload file again because of total chunks is changed which means file is changed.
+                before_file_uploaded = true;
+                let t_chunk = parseInt(totalChunks);
+                let c_chunk = parseInt(current_chunk);
+                let p_chunk = parseInt(previous_metadata.uploadedchunk);
+                if (t_chunk == p_chunk) {// if current total chunks is same as previous uploaded chunk then no need to upload file again because file is already uploaded with same total chunks and same file name
+                    return res.status(200).json({
+                        status: 200,
+                        message: 'file already uploaded',
+                        before_file_uploaded: before_file_uploaded,
+                        previous_metadata: previous_metadata
+                    });
+                }
+                if (c_chunk <= p_chunk) {//if previous total chunks is less than or equal to already uploaded chunk then no need to upload file again
+                    return res.status(200).json({
+                        status: 200,
+                        message: 'chunk already uploaded',
+                        before_file_uploaded: before_file_uploaded,
+                        previous_metadata: previous_metadata
+                    });
+                } else {
+                    fs.unlinkSync(json_file_path);
+                }
+            }
+        }
+        let previous_metadata_chunk_indexs = previous_metadata.chunk_indexs;
+        previous_metadata_chunk_indexs.push({ index: current_chunk });
+        let new_metadata = {
+            totalchunks: totalChunks,
+            uploadedchunk: current_chunk,
+            date_time: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
+            fileName: fileName,
+            chunk_indexs: previous_metadata_chunk_indexs,
+        };
+        fs.writeFileSync(json_file_path, JSON.stringify(new_metadata, null, 2));
+
+        const chunkFilePath = path.join(uploadpath, `chunk_${current_chunk}`);
+        await file.mv(chunkFilePath);
+
+        if (parseInt(current_chunk) == (parseInt(totalChunks) - 1)) {// if current chunk is last chunk then only we can merge all chunks and create final file otherwise we have to wait for all chunks to be uploaded
+            const finalFilePath = path.join(uploadpath, fileName);
+            const writeStream = fs.createWriteStream(finalFilePath);
+            for (let i = 0; i < totalChunks; i++) {
+                const chunkPath = path.join(uploadpath, `chunk_${i}`);
+                const data = fs.readFileSync(chunkPath);
+                writeStream.write(data);
+                fs.unlinkSync(chunkPath);
+            }
+            writeStream.end();
+        }
+
+
+        return res.status(200).json({
+            status: 200,
+            message: 'success',
+            before_file_uploaded: before_file_uploaded,
+            previous_metadata: previous_metadata
         });
-        req.pipe(writeStream);
-        req.on("end", () => {
-            return res.status(200).send({ status: 200, message: "success" });
-        });
+
     } catch (error) {
         return res.status(500).json({ status: 500, message: error.message });
     }
