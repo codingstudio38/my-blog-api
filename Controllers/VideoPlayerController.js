@@ -245,6 +245,116 @@ export async function VideothumbnailNew(req, resp) {
     }
 }
 
+export async function generateThumbnails(video, output) {
+    try {
+        await new Promise((resolve, reject) => {
+            ffmpeg(video)
+                .output(`${output}/thumb_%04d.jpg`)
+                .outputOptions([
+                    '-vf fps=1',       // 1 thumbnail per second
+                    // '-qscale:v 2'
+                ])
+                .on('end', resolve)
+                .on('error', reject)
+                .run();
+        });
+        return true;
+    } catch (error) {
+        throw new Error(error);
+    }
+}
+
+export async function generateSprite(video, output, blog) {
+    try {
+        const
+            thumbWidth = 160,
+            thumbHeight = 90,
+            interval = 1,
+            spriteUrl = `${APP_STORAGE}user-blogs/video-thumbnails${blog._id}/sprite.jpg`;
+        ;
+        const thumbs = fs.readdirSync(output).filter(f => f.startsWith('thumb_') && f.endsWith('.jpg'));
+        if (!thumbs.length) {
+            throw new Error('No thumbnails found to generate sprite');
+        }
+        const count = thumbs.length;
+
+        const cols = Math.ceil(Math.sqrt(count));
+        const rows = Math.ceil(count / cols);
+        await new Promise((resolve, reject) => {
+            ffmpeg()
+                .input(path.join(output, 'thumb_%04d.jpg'))
+                .inputOptions([
+                    '-pattern_type sequence',
+                    '-framerate 1'
+                ])
+                .outputOptions([
+                    `-vf scale=${thumbWidth}:${thumbHeight},tile=${cols}x${rows}`,
+                    '-frames:v 1'
+                    // '-qscale:v 2'
+                ])
+                .output(path.join(output, 'sprite.jpg'))
+                .on('end', resolve)
+                .on('error', reject)
+                .run();
+        });
+        // Generate metadata
+        const frames = {};
+        for (let i = 0; i < count; i++) {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+
+            frames[i] = {
+                x: -(col * thumbWidth),
+                y: -(row * thumbHeight)
+            };
+        }
+
+        const metadata = {
+            thumbWidth,
+            thumbHeight,
+            interval,
+            columns: cols,
+            rows,
+            count,
+            spriteUrl,
+            frames
+        };
+        fs.writeFileSync(path.join(output, 'sprite.json'), JSON.stringify(metadata, null, 2));
+        thumbs.forEach((files) => {
+            let f = `${output}/${files}`;
+            if (fs.existsSync(f)) {
+                fs.unlinkSync(f);
+            }
+        })
+        return metadata;
+    } catch (error) {
+        throw new Error(error);
+    }
+}
+
+export async function VideothumbnailMetaData(req, resp) {
+    try {
+        let { watch = '' } = req.body;
+        let sec = 2, total = 0, data = {};
+        if (!sec) sec = 2;
+        if (!watch) resp.status(200).json({ "status": 500, "message": "blog id requird", "data": false });
+        watch = await data_decrypt(decodeURIComponent(watch));
+        total = await BlogsModel.find({ 'content_alias': watch }).countDocuments();
+        if (total <= 0) return resp.status(200).json({ "status": 500, "message": "file not exists!!", "data": false });
+        data = await BlogsModel.findOne({ 'content_alias': watch });
+        const filepath = `${storageFolderPath()}user-blogs/video-thumbnails${data._id}/sprites.json`;
+        let FileExists_ = await FileExists(filepath);
+        if (!FileExists_) return resp.status(200).json({ "status": 500, "message": "file not exists!!", "result": {} });
+
+        const stream = await fs.readFileSync(filepath, 'utf8');
+        return resp.status(200).json({ status: 200, result: JSON.parse(stream) });
+
+    } catch (err) {
+        return resp.status(500).json({ status: 500, message: err.message });
+    }
+}
+
+
 
 export async function VideothumbnailV2(req, resp) {
     /// 1->npm install fluent-ffmpeg
@@ -395,177 +505,71 @@ export async function generateMultipleSprite(video, output, blog) {
     return metadata;
 }
 
-export async function generateThumbnails(video, output) {
-    try {
-        await new Promise((resolve, reject) => {
-            ffmpeg(video)
-                .output(`${output}/thumb_%04d.jpg`)
-                .outputOptions([
-                    '-vf fps=1',       // 1 thumbnail per second
-                    // '-qscale:v 2'
-                ])
-                .on('end', resolve)
-                .on('error', reject)
-                .run();
-        });
-        return true;
-    } catch (error) {
-        throw new Error(error);
-    }
-}
-
-export async function generateSprite(video, output, blog) {
-    try {
-        const
-            thumbWidth = 160,
-            thumbHeight = 90,
-            interval = 1,
-            spriteUrl = `${APP_STORAGE}user-blogs/video-thumbnails${blog._id}/sprite.jpg`;
-        ;
-        const thumbs = fs.readdirSync(output).filter(f => f.startsWith('thumb_') && f.endsWith('.jpg'));
-        if (!thumbs.length) {
-            throw new Error('No thumbnails found to generate sprite');
-        }
-        const count = thumbs.length;
-
-        const cols = Math.ceil(Math.sqrt(count));
-        const rows = Math.ceil(count / cols);
-        await new Promise((resolve, reject) => {
-            ffmpeg()
-                .input(path.join(output, 'thumb_%04d.jpg'))
-                .inputOptions([
-                    '-pattern_type sequence',
-                    '-framerate 1'
-                ])
-                .outputOptions([
-                    `-vf scale=${thumbWidth}:${thumbHeight},tile=${cols}x${rows}`,
-                    '-frames:v 1'
-                    // '-qscale:v 2'
-                ])
-                .output(path.join(output, 'sprite.jpg'))
-                .on('end', resolve)
-                .on('error', reject)
-                .run();
-        });
-        // Generate metadata
-        const frames = {};
-        for (let i = 0; i < count; i++) {
-            const col = i % cols;
-            const row = Math.floor(i / cols);
-
-            frames[i] = {
-                x: -(col * thumbWidth),
-                y: -(row * thumbHeight)
-            };
-        }
-
-        const metadata = {
-            thumbWidth,
-            thumbHeight,
-            interval,
-            columns: cols,
-            rows,
-            count,
-            spriteUrl,
-            frames
-        };
-        fs.writeFileSync(path.join(output, 'sprite.json'), JSON.stringify(metadata, null, 2));
-        thumbs.forEach((files) => {
-            let f = `${output}/${files}`;
-            if (fs.existsSync(f)) {
-                fs.unlinkSync(f);
-            }
-        })
-        return metadata;
-    } catch (error) {
-        throw new Error(error);
-    }
-}
-
-export async function VideothumbnailMetaData(req, resp) {
-    try {
-        let { watch = '' } = req.body;
-        let sec = 2, total = 0, data = {};
-        if (!sec) sec = 2;
-        if (!watch) resp.status(200).json({ "status": 500, "message": "blog id requird", "data": false });
-        watch = await data_decrypt(decodeURIComponent(watch));
-        total = await BlogsModel.find({ 'content_alias': watch }).countDocuments();
-        if (total <= 0) return resp.status(200).json({ "status": 500, "message": "file not exists!!", "data": false });
-        data = await BlogsModel.findOne({ 'content_alias': watch });
-        const filepath = `${storageFolderPath()}user-blogs/video-thumbnails${data._id}/sprites.json`;
-        let FileExists_ = await FileExists(filepath);
-        if (!FileExists_) return resp.status(200).json({ "status": 500, "message": "file not exists!!", "result": {} });
-
-        const stream = await fs.readFileSync(filepath, 'utf8');
-        return resp.status(200).json({ status: 200, result: JSON.parse(stream) });
-
-    } catch (err) {
-        return resp.status(500).json({ status: 500, message: err.message });
-    }
-}
-
 export async function UploadVideoInChunks(req, res) {
     try {
         if (req.files == undefined || req.files.file == undefined) {
-            return res.status(500).json({ status: 500, message: 'No file uploaded' });
+            return res.status(200).json({ status: 500, message: 'No file uploaded' });
         }
         // This is a simplified example. In production, you should handle edge cases, errors, and security concerns.
         const file = req.files.file;
         const fileName = req.body["fileName"];
-        const totalChunks = req.body["totalChunks"];
-        const current_chunk = req.body["chunkIndex"];
+        const totalChunks = parseInt(req.body["totalChunks"]);
+        const current_chunk = parseInt(req.body["chunkIndex"]);
         const userid = req.body["userid"];
+        const file_size = parseFloat(req.body["file_size"]);
         let before_file_uploaded = false;
+        let is_file_merge = false;
 
         let folder_name = fileName.trim().toLowerCase();
         folder_name = folder_name.replaceAll(' ', "_")
-            .replaceAll('.', "_").replaceAll('-', "_").replaceAll(',', "_").replaceAll('/', "_").replaceAll('\\', "_").replaceAll('(', "_")
-            .replaceAll(')', "_").replaceAll('#', "_").replaceAll('%', "_").replaceAll('@', "_").replaceAll('!', "_").replaceAll('$', "_")
-            .replaceAll('&', "_").replaceAll('*', "_").replaceAll('+', "_").replaceAll('=', "_").replaceAll('?', "_").replaceAll('^', "_")
-            .replaceAll('`', "_").replaceAll('~', "_").replaceAll('{', "_").replaceAll('}', "_").replaceAll('[', "_").replaceAll(']', "_")
-            .replaceAll('|', "_").replaceAll('||', "_").replaceAll("'", "_").replaceAll("\"", "_").replaceAll("<", "_").replaceAll(">", "_")
-            .replaceAll(";", "_").replaceAll(":", "_");
-        // console.clear();
-        // console.log(folder_name);
+        .replaceAll('.', "_").replaceAll('-', "_").replaceAll(',', "_").replaceAll('/', "_").replaceAll('\\', "_").replaceAll('(', "_")
+        .replaceAll(')', "_").replaceAll('#', "_").replaceAll('%', "_").replaceAll('@', "_").replaceAll('!', "_").replaceAll('$', "_")
+        .replaceAll('&', "_").replaceAll('*', "_").replaceAll('+', "_").replaceAll('=', "_").replaceAll('?', "_").replaceAll('^', "_")
+        .replaceAll('`', "_").replaceAll('~', "_").replaceAll('{', "_").replaceAll('}', "_").replaceAll('[', "_").replaceAll(']', "_")
+        .replaceAll('|', "_").replaceAll('||', "_").replaceAll("'", "_").replaceAll("\"", "_").replaceAll("<", "_").replaceAll(">", "_")
+        .replaceAll(";", "_").replaceAll(":", "_");
 
-        // console.clear();
-        // console.log(file)
-        // const fileName = req.headers["filename"];
-        // const current_chunk = req.headers["index"];
-
-        const file_n = fileName.split(".");
-        let file_type = file_n[file_n.length - 1];
-        let file_mimetype = file.mimetype;
-        let file_new_name = `${crypto.randomBytes(8).toString('hex')}.${file_type}`;
-
-        let uploadpath = `${storageFolderPath()}large-uploads/${userid}/${folder_name}/`;
+        const uploadpath = `${storageFolderPath()}large-uploads/${userid}/${folder_name}-${file_size}/`;
+        const view_path = `${APP_STORAGE}large-uploads/${userid}/${folder_name}-${file_size}/`;
+        const json_file_name = `${folder_name}-${file_size}.json`;
+        const json_file_path = path.join(uploadpath, json_file_name);
+        const json_file_view_path = `${view_path}${json_file_name}`;
+        const upload_file_view_path = `${view_path}${fileName}`;
 
         if (!fs.existsSync(uploadpath)) {
             fs.mkdirSync(uploadpath, { recursive: true });
         }
 
-        const json_file_path = path.join(uploadpath, `${folder_name}.json`);
         let previous_metadata = {
             totalchunks: 0,
             uploadedchunk: 0,
             date_time: new Date(),
             fileName: '',
+            file_size:0,
             chunk_indexs: [],
         }
         if (fs.existsSync(json_file_path)) {
             previous_metadata = await fs.readFileSync(json_file_path, 'utf8');
             previous_metadata = JSON.parse(previous_metadata);
-            if (previous_metadata.totalchunks == totalChunks && previous_metadata.fileName == fileName) {// if current total chunks is same as previous total chunks then only we can check about already uploaded chunk otherwise we have to upload file again because of total chunks is changed which means file is changed.
+            if (previous_metadata.file_size == file_size && previous_metadata.fileName == fileName) {// if current total chunks is same as previous total chunks then only we can check about already uploaded chunk otherwise we have to upload file again because of total chunks is changed which means file is changed.
                 before_file_uploaded = true;
-                let t_chunk = parseInt(totalChunks);
-                let c_chunk = parseInt(current_chunk);
-                let p_chunk = parseInt(previous_metadata.uploadedchunk);
+                let t_chunk = totalChunks;
+                let c_chunk = current_chunk;
+                let p_chunk = previous_metadata.uploadedchunk;
+                
                 if (t_chunk == p_chunk) {// if current total chunks is same as previous uploaded chunk then no need to upload file again because file is already uploaded with same total chunks and same file name
                     return res.status(200).json({
                         status: 200,
                         message: 'file already uploaded',
                         before_file_uploaded: before_file_uploaded,
-                        previous_metadata: previous_metadata
+                        previous_metadata: previous_metadata,
+                        folder_name:folder_name,
+                        uploadpath:uploadpath,
+                        json_file_path:json_file_path,
+                        file_name:fileName,
+                        json_file_view_path:json_file_view_path,
+                        upload_file_view_path:upload_file_view_path,
+                        is_file_merge:is_file_merge,
                     });
                 }
                 if (c_chunk <= p_chunk) {//if previous total chunks is less than or equal to already uploaded chunk then no need to upload file again
@@ -573,7 +577,14 @@ export async function UploadVideoInChunks(req, res) {
                         status: 200,
                         message: 'chunk already uploaded',
                         before_file_uploaded: before_file_uploaded,
-                        previous_metadata: previous_metadata
+                        previous_metadata: previous_metadata,
+                        folder_name:folder_name,
+                        uploadpath:uploadpath,
+                        json_file_path:json_file_path,
+                        file_name:fileName,
+                        json_file_view_path:json_file_view_path,
+                        upload_file_view_path:upload_file_view_path,
+                        is_file_merge:is_file_merge,
                     });
                 } else {
                     fs.unlinkSync(json_file_path);
@@ -581,20 +592,25 @@ export async function UploadVideoInChunks(req, res) {
             }
         }
         let previous_metadata_chunk_indexs = previous_metadata.chunk_indexs;
-        previous_metadata_chunk_indexs.push({ index: current_chunk });
+        previous_metadata_chunk_indexs.push({ index: current_chunk+1 });
         let new_metadata = {
             totalchunks: totalChunks,
             uploadedchunk: current_chunk,
             date_time: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
             fileName: fileName,
+            file_size:file_size,
             chunk_indexs: previous_metadata_chunk_indexs,
         };
+
+        if (current_chunk == (totalChunks - 1)) {
+            new_metadata.uploadedchunk = current_chunk+1;
+        }
         fs.writeFileSync(json_file_path, JSON.stringify(new_metadata, null, 2));
 
         const chunkFilePath = path.join(uploadpath, `chunk_${current_chunk}`);
         await file.mv(chunkFilePath);
 
-        if (parseInt(current_chunk) == (parseInt(totalChunks) - 1)) {// if current chunk is last chunk then only we can merge all chunks and create final file otherwise we have to wait for all chunks to be uploaded
+        if (current_chunk == (totalChunks - 1)) {// if current chunk is last chunk then only we can merge all chunks and create final file otherwise we have to wait for all chunks to be uploaded
             const finalFilePath = path.join(uploadpath, fileName);
             const writeStream = fs.createWriteStream(finalFilePath);
             for (let i = 0; i < totalChunks; i++) {
@@ -604,6 +620,7 @@ export async function UploadVideoInChunks(req, res) {
                 fs.unlinkSync(chunkPath);
             }
             writeStream.end();
+            is_file_merge=true;
         }
 
 
@@ -611,12 +628,52 @@ export async function UploadVideoInChunks(req, res) {
             status: 200,
             message: 'success',
             before_file_uploaded: before_file_uploaded,
-            previous_metadata: previous_metadata
+            previous_metadata: previous_metadata,
+            folder_name:folder_name,
+            uploadpath:uploadpath,
+            json_file_path:json_file_path,
+            file_name:fileName,
+            json_file_view_path:json_file_view_path,
+            upload_file_view_path:upload_file_view_path,
+            is_file_merge:is_file_merge,
+        });
+
+    } catch (error) {
+        return res.status(200).json({ status: 500, message: error.message });
+    }
+}
+
+
+export async function UploadVideoInChunksWithWorker(req, res) {
+    try {
+        if (req.files == undefined || req.files.file == undefined) {
+            return res.status(500).json({ status: 500, message: 'No file uploaded' });
+        }
+        // This is a simplified example. In production, you should handle edge cases, errors, and security concerns.
+        const file = req.files.file;
+        const fileName = req.body["fileName"];
+        const totalChunks = parseInt(req.body["totalChunks"]);
+        const current_chunk = parseInt(req.body["chunkIndex"]);
+        const userid = req.body["userid"];
+        const file_size = parseFloat(req.body["file_size"]);
+
+        const LargeFileHandler = new Worker(
+            path.join(__dirname, "HandleLargeFileWorker.js"),
+            {
+                workerData: {
+                    request: req.body,
+                    file: req.files.file.data,
+                    file_name: fileName,
+                }
+            });
+        LargeFileHandler.on("message",  (data) => {
+            return res.status(200).json(data);
+        });
+        LargeFileHandler.on("error", (e) => {
+            throw new Error(e);
         });
 
     } catch (error) {
         return res.status(500).json({ status: 500, message: error.message });
     }
-
 }
-
