@@ -89,8 +89,16 @@ try {
         process.exit(1);
     });
 
-    app.listen(PORT, HOST, () => {
+    const server = app.listen(PORT, HOST, () => {
         console.log(`Worker ${process.pid} running: http://${HOST}:${PORT}`);
+    });
+
+    process.on("SIGINT", () => {
+        console.error('\nGracefully shutting down..');
+        server.close(() => {
+            console.error("server closed, Bye!");
+            process.exit(1);
+        })
     });
 
 } catch (err) {
