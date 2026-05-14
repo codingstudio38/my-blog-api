@@ -94,9 +94,9 @@ try {
     });
 
     process.on("SIGINT", () => {
-        console.error('\nGracefully shutting down..');
+        console.log('\nGracefully shutting down..');
         server.close(() => {
-            console.error("server closed, Bye!");
+            console.log("server closed, Bye!");
             process.exit(1);
         })
     });
