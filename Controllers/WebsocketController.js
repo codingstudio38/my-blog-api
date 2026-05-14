@@ -58,7 +58,7 @@ const runWsServer = async () => {
         if (myfriends.length > 0) {
             myfriends.forEach((element) => {
                 const to_user_id = element.to_user_id.toString();
-                if (clients[to_user_id]) {
+                if (Object.keys(clients).includes(to_user_id)) {
                     clients[to_user_id].sendUTF(data);
                 }
             });
@@ -72,22 +72,22 @@ const runWsServer = async () => {
 
                 if (jsonpars?.code == 'send-offer') {
                     jsonpars = { ...jsonpars }
-                    if (jsonpars.to) {
+                    if (Object.keys(clients).includes(jsonpars?.to)) {
                         clients[jsonpars.to].sendUTF(JSON.stringify(jsonpars));
                     }
                 } else if (jsonpars?.code == 'answer-made') {
                     jsonpars = { ...jsonpars }
-                    if (jsonpars.to) {
+                    if (Object.keys(clients).includes(jsonpars?.to)) {
                         clients[jsonpars.to].sendUTF(JSON.stringify(jsonpars));
                     }
                 } else if (jsonpars?.code == 'ice-candidate') {
                     jsonpars = { ...jsonpars }
-                    if (jsonpars.to) {
+                    if (Object.keys(clients).includes(jsonpars?.to)) {
                         clients[jsonpars.to].sendUTF(JSON.stringify(jsonpars));
                     }
                 } else if (jsonpars?.code == user_is_typing) {
                     jsonpars = { ...jsonpars }
-                    if (jsonpars.to) {
+                    if (Object.keys(clients).includes(jsonpars?.to)) {
                         clients[jsonpars.to].sendUTF(JSON.stringify(jsonpars));
                     }
                 } else {
@@ -129,7 +129,7 @@ const runWsServer = async () => {
             if (myfriends.length > 0) {
                 myfriends.forEach((element) => {
                     const to_user_id = element.to_user_id.toString();
-                    if (clients[to_user_id]) {
+                    if (Object.keys(clients).includes(to_user_id)) {
                         clients[to_user_id].sendUTF(data);
                     }
                 });
