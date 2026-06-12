@@ -364,7 +364,7 @@ export async function VideothumbnailV2(req, resp) {
     // 2.b->Extract and copy bin folder path
     // 2.c->Set Environment variable in system settings
     // 3->Restart VS code or system
-    //http://192.168.61.155:5000/video-thumbnail-v2?watch=TJFzv7%2FNJ2JC7fSq7SMEmw%3D%3D
+    //http://localhost:5000/video-thumbnail-v2?watch=HFsJIh%2BHvUGyRMqxujT00%2F%2BgvnZlX%2Fr%2Fiqc0Du4Fn%2Bw%3D
     try {
         let { watch = '' } = req.query;
         let sec = 2, total = 0, data = {};
@@ -522,12 +522,12 @@ export async function UploadVideoInChunks(req, res) {
 
         let folder_name = fileName.trim().toLowerCase();
         folder_name = folder_name.replaceAll(' ', "_")
-        .replaceAll('.', "_").replaceAll('-', "_").replaceAll(',', "_").replaceAll('/', "_").replaceAll('\\', "_").replaceAll('(', "_")
-        .replaceAll(')', "_").replaceAll('#', "_").replaceAll('%', "_").replaceAll('@', "_").replaceAll('!', "_").replaceAll('$', "_")
-        .replaceAll('&', "_").replaceAll('*', "_").replaceAll('+', "_").replaceAll('=', "_").replaceAll('?', "_").replaceAll('^', "_")
-        .replaceAll('`', "_").replaceAll('~', "_").replaceAll('{', "_").replaceAll('}', "_").replaceAll('[', "_").replaceAll(']', "_")
-        .replaceAll('|', "_").replaceAll('||', "_").replaceAll("'", "_").replaceAll("\"", "_").replaceAll("<", "_").replaceAll(">", "_")
-        .replaceAll(";", "_").replaceAll(":", "_");
+            .replaceAll('.', "_").replaceAll('-', "_").replaceAll(',', "_").replaceAll('/', "_").replaceAll('\\', "_").replaceAll('(', "_")
+            .replaceAll(')', "_").replaceAll('#', "_").replaceAll('%', "_").replaceAll('@', "_").replaceAll('!', "_").replaceAll('$', "_")
+            .replaceAll('&', "_").replaceAll('*', "_").replaceAll('+', "_").replaceAll('=', "_").replaceAll('?', "_").replaceAll('^', "_")
+            .replaceAll('`', "_").replaceAll('~', "_").replaceAll('{', "_").replaceAll('}', "_").replaceAll('[', "_").replaceAll(']', "_")
+            .replaceAll('|', "_").replaceAll('||', "_").replaceAll("'", "_").replaceAll("\"", "_").replaceAll("<", "_").replaceAll(">", "_")
+            .replaceAll(";", "_").replaceAll(":", "_");
 
         const uploadpath = `${storageFolderPath()}large-uploads/${userid}/${folder_name}-${file_size}/`;
         const view_path = `${APP_STORAGE}large-uploads/${userid}/${folder_name}-${file_size}/`;
@@ -545,7 +545,7 @@ export async function UploadVideoInChunks(req, res) {
             uploadedchunk: 0,
             date_time: new Date(),
             fileName: '',
-            file_size:0,
+            file_size: 0,
             chunk_indexs: [],
         }
         if (fs.existsSync(json_file_path)) {
@@ -556,20 +556,20 @@ export async function UploadVideoInChunks(req, res) {
                 let t_chunk = totalChunks;
                 let c_chunk = current_chunk;
                 let p_chunk = previous_metadata.uploadedchunk;
-                
+
                 if (t_chunk == p_chunk) {// if current total chunks is same as previous uploaded chunk then no need to upload file again because file is already uploaded with same total chunks and same file name
                     return res.status(200).json({
                         status: 200,
                         message: 'file already uploaded',
                         before_file_uploaded: before_file_uploaded,
                         previous_metadata: previous_metadata,
-                        folder_name:folder_name,
-                        uploadpath:uploadpath,
-                        json_file_path:json_file_path,
-                        file_name:fileName,
-                        json_file_view_path:json_file_view_path,
-                        upload_file_view_path:upload_file_view_path,
-                        is_file_merge:is_file_merge,
+                        folder_name: folder_name,
+                        uploadpath: uploadpath,
+                        json_file_path: json_file_path,
+                        file_name: fileName,
+                        json_file_view_path: json_file_view_path,
+                        upload_file_view_path: upload_file_view_path,
+                        is_file_merge: is_file_merge,
                     });
                 }
                 if (c_chunk <= p_chunk) {//if previous total chunks is less than or equal to already uploaded chunk then no need to upload file again
@@ -578,13 +578,13 @@ export async function UploadVideoInChunks(req, res) {
                         message: 'chunk already uploaded',
                         before_file_uploaded: before_file_uploaded,
                         previous_metadata: previous_metadata,
-                        folder_name:folder_name,
-                        uploadpath:uploadpath,
-                        json_file_path:json_file_path,
-                        file_name:fileName,
-                        json_file_view_path:json_file_view_path,
-                        upload_file_view_path:upload_file_view_path,
-                        is_file_merge:is_file_merge,
+                        folder_name: folder_name,
+                        uploadpath: uploadpath,
+                        json_file_path: json_file_path,
+                        file_name: fileName,
+                        json_file_view_path: json_file_view_path,
+                        upload_file_view_path: upload_file_view_path,
+                        is_file_merge: is_file_merge,
                     });
                 } else {
                     fs.unlinkSync(json_file_path);
@@ -592,18 +592,18 @@ export async function UploadVideoInChunks(req, res) {
             }
         }
         let previous_metadata_chunk_indexs = previous_metadata.chunk_indexs;
-        previous_metadata_chunk_indexs.push({ index: current_chunk+1 });
+        previous_metadata_chunk_indexs.push({ index: current_chunk + 1 });
         let new_metadata = {
             totalchunks: totalChunks,
             uploadedchunk: current_chunk,
             date_time: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
             fileName: fileName,
-            file_size:file_size,
+            file_size: file_size,
             chunk_indexs: previous_metadata_chunk_indexs,
         };
 
         if (current_chunk == (totalChunks - 1)) {
-            new_metadata.uploadedchunk = current_chunk+1;
+            new_metadata.uploadedchunk = current_chunk + 1;
         }
         fs.writeFileSync(json_file_path, JSON.stringify(new_metadata, null, 2));
 
@@ -620,7 +620,7 @@ export async function UploadVideoInChunks(req, res) {
                 fs.unlinkSync(chunkPath);
             }
             writeStream.end();
-            is_file_merge=true;
+            is_file_merge = true;
         }
 
 
@@ -629,13 +629,13 @@ export async function UploadVideoInChunks(req, res) {
             message: 'success',
             before_file_uploaded: before_file_uploaded,
             previous_metadata: previous_metadata,
-            folder_name:folder_name,
-            uploadpath:uploadpath,
-            json_file_path:json_file_path,
-            file_name:fileName,
-            json_file_view_path:json_file_view_path,
-            upload_file_view_path:upload_file_view_path,
-            is_file_merge:is_file_merge,
+            folder_name: folder_name,
+            uploadpath: uploadpath,
+            json_file_path: json_file_path,
+            file_name: fileName,
+            json_file_view_path: json_file_view_path,
+            upload_file_view_path: upload_file_view_path,
+            is_file_merge: is_file_merge,
         });
 
     } catch (error) {
@@ -666,7 +666,7 @@ export async function UploadVideoInChunksWithWorker(req, res) {
                     file_name: fileName,
                 }
             });
-        LargeFileHandler.on("message",  (data) => {
+        LargeFileHandler.on("message", (data) => {
             return res.status(200).json(data);
         });
         LargeFileHandler.on("error", (e) => {

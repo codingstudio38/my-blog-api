@@ -2578,6 +2578,7 @@ export async function ShareBlog(req, resp) {
                 main_blog_user_id: main_blog.user_id,
                 is_archive: false,
                 active_status: 1,
+                publish: true,
                 created_at: moment().tz(process.env.TIMEZONE).format('YYYY-MM-DD HH:mm:ss'),
             };
             Blog = new BlogsModel(data);
