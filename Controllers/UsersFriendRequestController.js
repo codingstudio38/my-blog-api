@@ -114,7 +114,7 @@ export async function CencelRequest(req, resp) {
         if (!to) {
             return resp.status(200).json({ 'status': 400, 'message': 'to id required.' });
         }
-        from = user_id;
+        let from = user_id;
         const check_user_accept_satus = await UsersFriendModel.find({
             $and: [
                 { 'requestid': new mongodb.ObjectId(requestid) },
