@@ -1,11 +1,11 @@
 // npm instal speakeasy qrcode
-const speakeasy = require('speakeasy'); 
-const qrcode= require('qrcode');
-// var secret = speakeasy.generateSecret({
-//     name: "WeAreDevs"
-// });
-// console.log(secret);
-// qrcode.toDataURL(secret.otpauth_url, function(err, data) {
+import qrcode from 'qrcode';
+import speakeasy from 'speakeasy';
+var secret = speakeasy.generateSecret({
+    name: "WeAreDevs"
+});
+console.log(secret);
+// qrcode.toDataURL(secret.otpauth_url, function (err, data) {
 //     console.log(data)
 // })
 // respons
@@ -20,8 +20,8 @@ const qrcode= require('qrcode');
 // open google authenticator app and scan qr code
 //
 var verified = speakeasy.totp.verify({
-secret: 'HrTi4Kx7o1ZPya#zVaw2tdH@{IRk3){*',
-encoding: 'ascii',
-token: '520050'
+    secret: 'NWr1KTkT>1SCSu&EcCASqoaUGX1kl)p]',
+    encoding: 'ascii',
+    token: '362060'
 })
 console.log(verified);
